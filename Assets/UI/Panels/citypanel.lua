@@ -9,7 +9,7 @@ include( "Colors" );
 include( "InstanceManager" );
 include( "SupportFunctions" );      -- Round(), Clamp(), DarkenLightenColor()
 include( "ToolTipHelper" );
-
+include("GameCapabilities");
 -- ===========================================================================
 --  DEBUG
 --  Toggle these for temporary debugging help.
@@ -27,7 +27,7 @@ local SIZE_MAIN_ROW_LEFT_WIDE   :number = 270;
 local SIZE_MAIN_ROW_LEFT_COLLAPSED  :number = 157;
 local TXT_NO_PRODUCTION       :string = Locale.Lookup("LOC_HUD_CITY_PRODUCTION_NOTHING_PRODUCED");
 local MAX_BEFORE_TRUNC_TURN_LABELS  :number = 160;
-local MAX_BEFORE_TRUNC_STATIC_LABELS:number = 110;
+local MAX_BEFORE_TRUNC_STATIC_LABELS:number = 112;
 local HEX_GROWTH_TEXT_PADDING   :number = 10;
 
 local UV_CITIZEN_GROWTH_STATUS    :table  = {};
@@ -62,7 +62,7 @@ local m_secondaryColor        :number = 0xf00d1ace;
 local m_kTutorialDisabledControls :table  = nil;
 local m_GrowthPlot          :number = -1;
 
-local CQUI_HousingFromImprovementsTable :table = {};
+local CQUI_HousingFromImprovementsTable :table = {};    -- CQUI real housing from improvements table
 
 -- ====================CQUI Cityview==========================================
 
@@ -96,13 +96,14 @@ function CQUI_OnCityviewEnabled()
     Controls.CityPanelAlpha:Play();
     Controls.CityPanelSlide:SetToBeginning();
     Controls.CityPanelSlide:Play();
+  end
     Refresh();
     UILens.ToggleLayerOn(LensLayers.PURCHASE_PLOT);
     UILens.ToggleLayerOn(LensLayers.CITIZEN_MANAGEMENT);
     UI.SetFixedTiltMode(true);
     DisplayGrowthTile();
     UI.SetInterfaceMode(InterfaceModeTypes.CITY_MANAGEMENT);
-  end
+
 end
 
 function CQUI_OnCityviewDisabled()
@@ -133,7 +134,7 @@ function CQUI_HideCityInterface()
   UI.SetFixedTiltMode(false);
   LuaEvents.CQUI_CityPanelOverview_CityviewDisable();
   LuaEvents.CQUI_WorldInput_CityviewDisable();
-  CQUI_ClearGrowthTile(); -- AZURENCY : added the clear ClearGrowthTile() because why might not deselect the city but still want it hidden
+  HideGrowthTile(); -- AZURENCY : added the clear ClearGrowthTile() because why might not deselect the city but still want it hidden
 end
 
 LuaEvents.CQUI_CityPanel_CityviewEnable.Add( CQUI_OnCityviewEnabled);
@@ -150,6 +151,25 @@ function CQUI_OnInterfaceModeChanged( eOldMode:number, eNewMode:number )
   elseif(eOldMode == InterfaceModeTypes.CITY_MANAGEMENT or eOldMode == InterfaceModeTypes.DISTRICT_PLACEMENT or eOldMode == InterfaceModeTypes.BUILDING_PLACEMENT) then
     if(eNewMode == InterfaceModeTypes.DISTRICT_PLACEMENT or eNewMode == InterfaceModeTypes.BUILDING_PLACEMENT) then
       CQUI_WonderModeEnabled();
+      HideGrowthTile();
+      local newGrowthPlot:number = m_pCity:GetCulture():GetNextPlot();	--show the growth tile if the district or wonder can be placed there
+      if(newGrowthPlot ~= -1) then
+        if (eNewMode == InterfaceModeTypes.DISTRICT_PLACEMENT) then
+          local districtHash:number	= UI.GetInterfaceModeParameter(CityOperationTypes.PARAM_DISTRICT_TYPE);
+          local district:table		= GameInfo.Districts[districtHash];
+          local kPlot		:table			= Map.GetPlotByIndex(newGrowthPlot);
+          if kPlot:CanHaveDistrict(district.Index, m_pPlayer, m_pCity:GetID()) then
+            DisplayGrowthTile();
+          end
+        elseif (eNewMode == InterfaceModeTypes.BUILDING_PLACEMENT) then
+          local buildingHash :number = UI.GetInterfaceModeParameter(CityOperationTypes.PARAM_BUILDING_TYPE);
+          local building = GameInfo.Buildings[buildingHash];
+          local kPlot		:table			= Map.GetPlotByIndex(newGrowthPlot);
+          if kPlot:CanHaveWonder(building.Index, m_pPlayer, m_pCity:GetID()) then
+            DisplayGrowthTile();
+          end
+        end
+      end
     elseif(eNewMode ~= InterfaceModeTypes.CITY_MANAGEMENT) then
       if(CQUI_wonderMode) then
         LuaEvents.CQUI_CityviewEnable();
@@ -204,7 +224,7 @@ function CQUI_OnCitySelectionChanged( ownerPlayerID:number, cityID:number, i:num
         Refresh();
       end
     else
-      CQUI_ClearGrowthTile();
+      HideGrowthTile();
     end
   end
 end
@@ -213,14 +233,12 @@ function CQUI_OnNextCity()
   local kCity:table = UI.GetHeadSelectedCity();
   UI.SelectNextCity(kCity);
   UI.PlaySound("UI_Click_Sweetener_Metal_Button_Small");
-  CQUI_UpdateSelectedCityCitizens();
 end
 
 function CQUI_OnPreviousCity()
   local kCity:table = UI.GetHeadSelectedCity();
   UI.SelectPrevCity(kCity);
   UI.PlaySound("UI_Click_Sweetener_Metal_Button_Small");
-  CQUI_UpdateSelectedCityCitizens();
 end
 
 function CQUI_OnLoadScreenClose()
@@ -407,15 +425,11 @@ function ViewMain( data:table )
   end
   Controls.CityHealthMeter:SetToolTipString(tooltip);
 
-  local leader:string = PlayerConfigurations[data.Owner]:GetLeaderTypeName();
-  local civIconName:string = "ICON_";
-  if GameInfo.CivilizationLeaders[leader] == nil then
-    UI.DataError("Banners found a leader \""..leader.."\" which is not/no longer in the game; icon may be whack.");
+  local civType:string = PlayerConfigurations[data.Owner]:GetCivilizationTypeName();
+  if civType ~= nil then
+    Controls.CivIcon:SetIcon("ICON_" .. civType);
   else
-    if(GameInfo.CivilizationLeaders[leader].CivilizationType ~= nil) then
-      civIconName = civIconName..GameInfo.CivilizationLeaders[leader].CivilizationType;
-      Controls.CivIcon:SetIcon(civIconName);
-    end
+    UI.DataError("Invalid type name returned by GetCivilizationTypeName");
   end
 
   -- Divine Yuri's Tooltip calculations (Some changes made for CQUI)
@@ -626,6 +640,7 @@ function ViewMain( data:table )
   -- CQUI get real housing from improvements value
   local selectedCityID = selectedCity:GetID();
   local CQUI_HousingFromImprovements = CQUI_HousingFromImprovementsTable[selectedCityID];
+
   Controls.HousingNum:SetText( data.Population );
   colorName = GetPercentGrowthColor( data.HousingMultiplier );
   Controls.HousingNum:SetColorByName( colorName );
@@ -637,6 +652,18 @@ function ViewMain( data:table )
   Controls.HousingLabel:SetHide( m_isShowingPanels );
   Controls.PanelStackShadow:SetHide( not m_isShowingPanels );
   Controls.ProductionNowLabel:SetHide( m_isShowingPanels );
+
+  -- Hide Religion / Faith UI in some scenarios
+  if not GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_RELIGION_TAB") then
+    Controls.ReligionGrid:SetHide(true);
+    Controls.ReligionIcon:SetHide(true);
+  end
+  if not GameCapabilities.HasCapability("CAPABILITY_FAITH") then
+    Controls.ProduceWithFaithCheck:SetHide(true);
+    Controls.FaithGrid:SetHide(true);
+    Controls.ActionStack:ReprocessAnchoring();
+    Controls.YieldStack:ReprocessAnchoring();
+  end
 
   -- Determine size of progress bars at the bottom, as well as sub-panel offset.
   local OFF_BOTTOM_Y            :number = 9;
@@ -923,6 +950,7 @@ function OnTileImproved(x, y)
       LuaEvents.CityPanel_LiveCityDataChanged( m_kData, true );
       --LuaEvents.UpdateBanner(Game.GetLocalPlayer(), m_pCity:GetID());
 
+      -- CQUI update city's real housing
       local pCityID = m_pCity:GetID();
       LuaEvents.CQUI_CityInfoUpdated(pCityID);
     end
@@ -1017,6 +1045,7 @@ function OnUnitSelectionChanged( playerID:number, unitID:number, hexI:number, he
   if playerID == Game.GetLocalPlayer() then
     if ContextPtr:IsHidden()==false then
       Close();
+      Controls.ToggleOverviewPanel:SetAndCall(false);
     end
   end
 end
@@ -1085,8 +1114,6 @@ function OnTutorialOpen()
   Refresh();
 end
 
-
-
 -- ===========================================================================
 function OnBreakdown()
   LuaEvents.CityPanel_ShowBreakdownTab();
@@ -1121,7 +1148,6 @@ end
 function OnCitizensGrowth()
   LuaEvents.CityPanel_ShowCitizensTab();
 end
-
 
 -- ===========================================================================
 --  Set a yield to one of 3 check states.
@@ -1172,7 +1198,7 @@ function OnTogglePurchaseTile()
     RecenterCameraOnCity();
     UILens.ToggleLayerOn( LensLayers.PURCHASE_PLOT );
   else
-    if not Controls.ManageCitizensCheck:IsChecked() then
+    if not Controls.ManageCitizensCheck:IsChecked() and UI.GetInterfaceMode() == InterfaceModeTypes.CITY_MANAGEMENT then
       UI.SetInterfaceMode(InterfaceModeTypes.SELECTION);      -- Exit mode
     end
     UILens.ToggleLayerOff( LensLayers.PURCHASE_PLOT );
@@ -1244,8 +1270,25 @@ function EnableIfNotTutorialBlocked( controlName:string )
   Controls[ controlName ]:SetDisabled( isDisabled );
 end
 
+function OnCameraUpdate( vFocusX:number, vFocusY:number, fZoomLevel:number )
+  if m_GrowthPlot ~= -1 then
+
+    if fZoomLevel and fZoomLevel > 0.5 then
+      local delta:number = (fZoomLevel - 0.3);
+      local alpha:number = delta / 0.7;
+      Controls.GrowthHexAlpha:SetProgress(alpha);
+    else
+      Controls.GrowthHexAlpha:SetProgress(0);
+    end
+
+    local plotX:number, plotY:number = Map.GetPlotLocation(m_GrowthPlot);
+    local worldX:number, worldY:number, worldZ:number = UI.GridToWorld(plotX, plotY);
+    Controls.GrowthHexAnchor:SetWorldPositionVal(worldX, worldY + HEX_GROWTH_TEXT_PADDING, worldZ);
+  end
+end
+
 function DisplayGrowthTile()
-  if m_pCity ~= nil then
+  if m_pCity ~= nil and HasCapability("CAPABILITY_CULTURE") then
     local cityCulture:table = m_pCity:GetCulture();
     if cityCulture ~= nil then
       local newGrowthPlot:number = cityCulture:GetNextPlot();
@@ -1263,11 +1306,27 @@ function DisplayGrowthTile()
         UILens.SetLayerGrowthHex(LensLayers.PURCHASE_PLOT, Game.GetLocalPlayer(), m_GrowthPlot, currentGrowth, "GrowthHexCurrent");
 
         local turnsRemaining:number = cityCulture:GetTurnsUntilExpansion();
+        Controls.TurnsLeftDescription:SetText(Locale.ToUpper(Locale.Lookup("LOC_HUD_CITY_TURNS_UNTIL_BORDER_GROWTH", turnsRemaining)));
+        Controls.TurnsLeftLabel:SetText(turnsRemaining);
+        Controls.GrowthHexStack:CalculateSize();
+        m_GrowthHexTextWidth = Controls.GrowthHexStack:GetSizeX();
+
+        Events.Camera_Updated.Add(OnCameraUpdate);
+        Controls.GrowthHexAnchor:SetHide(false);
+        OnCameraUpdate();
       end
     end
   end
 end
 
+function HideGrowthTile()
+  if m_GrowthPlot ~= -1 then
+    Controls.GrowthHexAnchor:SetHide(true);
+    Events.Camera_Updated.Remove(OnCameraUpdate);
+    UILens.ClearHex(LensLayers.PURCHASE_PLOT, m_GrowthPlot);
+    m_GrowthPlot = -1;
+  end
+end
 
 -- ===========================================================================
 --  Engine EVENT
@@ -1283,7 +1342,6 @@ function OnLocalPlayerChanged( eLocalPlayer:number , ePrevLocalPlayer:number )
     Close();
   end
 end
-
 
 -- ===========================================================================
 --  Show/hide an area based on the status of a checkbox control
@@ -1311,7 +1369,6 @@ function SetupCollapsibleToggle( pCheckBoxControl:table, pButtonControl:table, p
     );
   end
 end
-
 
 -- ===========================================================================
 --  LUA Event
@@ -1346,21 +1403,7 @@ function OnTutorial_ContextDisableItems( contextName:string, kIdsToDisable:table
 end
 
 -- ===========================================================================
-function CQUI_UpdateSelectedCityCitizens( plotId:number )
-
-  local pSelectedCity	:table = UI.GetHeadSelectedCity();
-  local kPlot			:table = Map.GetPlotByIndex(plotId);
-  local tParameters	:table = {};
-  tParameters[CityCommandTypes.PARAM_MANAGE_CITIZEN] = UI.GetInterfaceModeParameter(CityCommandTypes.PARAM_MANAGE_CITIZEN);
-  tParameters[CityCommandTypes.PARAM_X] = kPlot:GetX();
-  tParameters[CityCommandTypes.PARAM_Y] = kPlot:GetY();
-
-  local tResults :table = CityManager.RequestCommand( pSelectedCity, CityCommandTypes.MANAGE, tParameters );
-  return true;
-end
-
--- ===========================================================================
---CQUI get real housing from improvements
+-- CQUI get real housing from improvements
 function CQUI_HousingFromImprovementsTableInsert (pCityID, CQUI_HousingFromImprovements)
   CQUI_HousingFromImprovementsTable[pCityID] = CQUI_HousingFromImprovements;
 end
@@ -1402,8 +1445,13 @@ function Initialize()
   -- CQUI recenter on the city when clicking the round icon in the panel
   Controls.CircleBacking:RegisterCallback( Mouse.eLClick,  RecenterCameraOnCity);
 
-  Controls.PurchaseTileCheck:RegisterCheckHandler(  OnTogglePurchaseTile );
-  Controls.PurchaseTileCheck:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end);
+  if GameCapabilities.HasCapability("CAPABILITY_GOLD") then
+    Controls.PurchaseTileCheck:RegisterCheckHandler(OnTogglePurchaseTile );
+    Controls.PurchaseTileCheck:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end);
+  else
+    Controls.PurchaseTileCheck:SetHide(true);
+  end
+
   Controls.ManageCitizensCheck:RegisterCheckHandler(  OnToggleManageCitizens );
   Controls.ManageCitizensCheck:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end);
   Controls.ChangeProductionCheck:RegisterCheckHandler( OnToggleProduction );
@@ -1441,12 +1489,23 @@ function Initialize()
   LuaEvents.ProductionPanel_Close.Add( OnProductionPanelClose );
   LuaEvents.Tutorial_CityPanelOpen.Add( OnTutorialOpen );
   LuaEvents.Tutorial_ContextDisableItems.Add( OnTutorial_ContextDisableItems );
+  LuaEvents.CityPanel_SetOverViewState.Add(function(isOpened)
+    Controls.ToggleOverviewPanel:SetCheck(isOpened);
+  end);
+  LuaEvents.CityPanel_ToggleManageCitizens.Add(function()
+    Controls.ManageCitizensCheck:SetAndCall(not Controls.ManageCitizensCheck:IsChecked());
+  end);
+
+  -- CQUI Events
   LuaEvents.CQUI_GoNextCity.Add( CQUI_OnNextCity );
   LuaEvents.CQUI_GoPrevCity.Add( CQUI_OnPreviousCity );
   LuaEvents.CQUI_ToggleGrowthTile.Add( CQUI_ToggleGrowthTile );
   LuaEvents.CQUI_SettingsUpdate.Add( CQUI_SettingsUpdate );
   LuaEvents.RefreshCityPanel.Add(Refresh);
-  LuaEvents.CQUI_RealHousingFromImprovementsCalculated.Add(CQUI_HousingFromImprovementsTableInsert);    --CQUI get real housing from improvements values
+  LuaEvents.CQUI_RealHousingFromImprovementsCalculated.Add(CQUI_HousingFromImprovementsTableInsert);    -- CQUI get real housing from improvements values
+  LuaEvents.CQUI_CityLostTileToCultureBomb.Add( Refresh );    -- CQUI update real housing from improvements when a city lost tile to a Culture Bomb
+  LuaEvents.CQUI_IndiaPlayerResearchedSanitation.Add( Refresh );    -- CQUI update real housing from improvements when play as India and researched Sanitation
+  LuaEvents.CQUI_IndonesiaPlayerResearchedMassProduction.Add( Refresh );    -- CQUI update real housing from improvements when play as Indonesia and researched Mass Production
 
   -- Truncate possible static text overflows
   TruncateStringWithTooltip(Controls.BreakdownLabel,  MAX_BEFORE_TRUNC_STATIC_LABELS, Controls.BreakdownLabel:GetText());

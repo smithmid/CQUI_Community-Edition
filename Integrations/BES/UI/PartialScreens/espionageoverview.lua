@@ -12,8 +12,9 @@ include( "TabSupport" );
 -- ===========================================================================
 
 local RELOAD_CACHE_ID:string = "EspionageOverview"; -- Must be unique (usually the same as the file name)
-local MAX_BEFORE_TRUNC_MISSION_NAME     :number = 170;
-local MAX_BEFORE_TRUNC_ASK_FOR_TRADE        :number = 135;
+local MAX_BEFORE_TRUNC_MISSION_NAME   :number = 170;
+local MAX_BEFORE_TRUNC_ASK_FOR_TRADE  :number = 135;
+local TRAVEL_DEST_TRUNCATE_WIDTH      :number = 170;
 
 local EspionageTabs:table = {
   OPERATIVES      = 0;
@@ -142,6 +143,7 @@ function RefreshOperatives()
 
   Controls.OperativeStack:CalculateSize();
   Controls.OperativeStack:ReprocessAnchoring();
+  Controls.OperativeScrollPanel:CalculateSize();
 end
 
 -- ===========================================================================
@@ -159,10 +161,8 @@ function RefreshCityActivity()
   local players:table = Game.GetPlayers();
   for i, player in ipairs(players) do
     local playerInfluence:table = player:GetInfluence();
-    -- Ignore city states (only they can receive influence)
-    if playerInfluence and not playerInfluence:CanReceiveInfluence() and
-      m_filterList[m_filterSelected].FilterFunction(player) then
-      AddPlayerCities(player);
+    if m_filterList[m_filterSelected].FilterFunction(player) and ShouldAddPlayer(player) then
+      AddPlayerCities(player)
     end
   end
 
@@ -282,12 +282,16 @@ function AddMisisonHistoryInstance(mission:table)
     missionHistoryInstance.OperationIcon:SetHide(true);
   end
 
-  local iconString:string = "ICON_" .. operationInfo.TargetDistrict;
-  textureOffsetX, textureOffsetY, textureSheet = IconManager:FindIconAtlas(iconString,32);
-  if textureSheet then
-    missionHistoryInstance.OperationDistrictIcon:SetTexture(textureOffsetX, textureOffsetY, textureSheet);
+  if operationInfo.TargetDistrict ~= nil then
+    local iconString:string = "ICON_" .. operationInfo.TargetDistrict;
+    textureOffsetX, textureOffsetY, textureSheet = IconManager:FindIconAtlas(iconString,32);
+    if textureSheet then
+      missionHistoryInstance.OperationDistrictIcon:SetTexture(textureOffsetX, textureOffsetY, textureSheet);
+    else
+      UI.DataError("Unable to find icon for district: " .. iconString);
+    end
   else
-    UI.DataError("Unable to find icon for district: " .. iconString);
+    UI.DataError("Unable to find target district");
   end
 
   -- Scale the operation and district icons to match the operation description
@@ -323,38 +327,57 @@ function AddPlayerCities(player:table)
 end
 
 -- ===========================================================================
+function ShouldAddPlayer(player:table)
+  local localPlayer = Players[Game.GetLocalPlayer()];
+  -- Only show full civs
+  if player:IsMajor() then
+    if (player:GetID() == localPlayer:GetID() or player:GetTeam() == -1 or localPlayer:GetTeam() == -1 or player:GetTeam() ~= localPlayer:GetTeam()) then
+      return true
+    end
+  end
+  return false
+end
+
+-- ===========================================================================
+function ShouldAddToFilter(player:table)
+  if player:IsMajor() and HasMetAndAlive(player) and (not player:IsBarbarian()) then
+    return true
+  end
+  return false
+end
+
+-- ===========================================================================
 function shouldDisplayCity(city:table)
-  local isValid = true;
   if Controls.FilterCityCenterCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_CITY_CENTER") then
-    isValid = false
+    return false
   end
-  if isValid and Controls.FilterCommericalHubCheckbox:IsChecked() and not
+  if Controls.FilterCommericalHubCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_COMMERCIAL_HUB") then
-    isValid = false
+    return false
   end
-  if isValid and Controls.FilterTheaterCheckbox:IsChecked() and not
+  if Controls.FilterTheaterCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_THEATER") then
-    isValid = false
+    return false
   end
-  if isValid and Controls.FilterCampusCheckbox:IsChecked() and not
+  if Controls.FilterCampusCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_CAMPUS") then
-    isValid = false
+    return false
   end
-  if isValid and Controls.FilterIndustrialCheckbox:IsChecked() and not
+  if Controls.FilterIndustrialCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_INDUSTRIAL_ZONE") then
-    isValid = false
+    return false
   end
-  if isValid and Controls.FilterNeighborhoodCheckbox:IsChecked() and not
+  if Controls.FilterNeighborhoodCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_NEIGHBORHOOD") then
-    isValid = false
+    return false
   end
-  if isValid and Controls.FilterSpaceportCheckbox:IsChecked() and not
+  if Controls.FilterSpaceportCheckbox:IsChecked() and not
       hasDistrict(city, "DISTRICT_SPACEPORT") then
-    isValid = false
+    return false
   end
 
-  return isValid
+  return true
 end
 
 -- ===========================================================================
@@ -419,21 +442,9 @@ function AddDistrictIcon(stackControl:table, city:table, districtType:string)
 
   local toolTipString:string = "";
 
-  -- Check if we have this district
-  local hasDistrict:boolean = false;
-  local cityDistricts:table = city:GetDistricts();
-  for i, district in cityDistricts:Members() do
-    if district:IsComplete() then
-      local districtInfo:table = GameInfo.Districts[district:GetType()];
-      if districtInfo.DistrictType == districtType then
-        hasDistrict = true;
-        toolTipString = Locale.Lookup(districtInfo.Name);
-      end
-    end
-  end
-
   -- We're manipulating the alpha to hide each element so they maintain their stack positions
-  if hasDistrict then
+  if hasDistrict(city, districtType) then --ARISTOS: make use of the espionagesupport.lua funtion, more efficient and has been fixed to only show valid targets
+    toolTipString = Locale.Lookup(GameInfo.Districts[districtType].Name);
     districtInstance.DistrictIcon:SetAlpha(1.0);
   else
     districtInstance.DistrictIcon:SetAlpha(0.0);
@@ -448,7 +459,7 @@ function AddDistrictIcon(stackControl:table, city:table, districtType:string)
   local playerUnits:table = Players[Game.GetLocalPlayer()]:GetUnits();
   for i,unit in playerUnits:Members() do
     local unitInfo:table = GameInfo.Units[unit:GetUnitType()];
-    if not shouldShowActiveSpy and unitInfo.Spy then
+    if unitInfo.Spy then
       local operationType:number = unit:GetSpyOperation();
       local operationInfo:table = GameInfo.UnitOperations[operationType];
       if operationInfo then
@@ -458,8 +469,17 @@ function AddDistrictIcon(stackControl:table, city:table, districtType:string)
           local activeDistrictType:number = spyPlot:GetDistrictType();
           local districtInfo = GameInfo.Districts[activeDistrictType];
           if districtInfo.DistrictType == districtType then
+            -- Turns Remaining
+            local turnsRemaining:number = unit:GetSpyOperationEndTurn() - Game.GetCurrentGameTurn();
+            if turnsRemaining <= 0 then
+              turnsRemaining = 0;
+            end
+
             shouldShowActiveSpy = true;
-            toolTipString = toolTipString .. "[NEWLINE]" .. Locale.Lookup(operationInfo.Description);
+            toolTipString = toolTipString .. "[NEWLINE]" ..
+              Locale.Lookup(unit:GetName()) .. ": " ..
+              Locale.Lookup(operationInfo.Description) .. " -- " ..
+              Locale.Lookup("LOC_ESPIONAGEOVERVIEW_MORE_TURNS", turnsRemaining);
           end
         end
       end
@@ -500,22 +520,12 @@ function OnDistrickFilterCheckbox(pControl)
 end
 
 -- ===========================================================================
-function IsCityState(player:table)
-  local playerInfluence:table = player:GetInfluence();
-  if  playerInfluence:CanReceiveInfluence() then
-    return true
-  end
-
-  return false
-end
-
--- ===========================================================================
 function HasMetAndAlive(player:table)
+  local localPlayerID = Game.GetLocalPlayer()
   if localPlayerID == player:GetID() then
     return true
   end
 
-  local localPlayerID = Game.GetLocalPlayer()
   local localPlayer = Players[localPlayerID];
   local localPlayerDiplomacy = localPlayer:GetDiplomacy();
 
@@ -524,6 +534,14 @@ function HasMetAndAlive(player:table)
   end
 
   return false;
+end
+
+function IsCityState(player:table)
+  local playerInfluence:table = player:GetInfluence();
+  if  playerInfluence:CanReceiveInfluence() then
+    return true
+  end
+  return false
 end
 
 -- ---------------------------------------------------------------------------
@@ -540,11 +558,18 @@ function RefreshFilters()
 
   -- Add Players Filter
   local players:table = Game.GetPlayers();
+  local addedCityStateFilter:boolean = false
   for i, pPlayer in ipairs(players) do
-    if not IsCityState(pPlayer) and HasMetAndAlive(pPlayer) and not pPlayer:IsBarbarian() then
-      local playerConfig:table = PlayerConfigurations[pPlayer:GetID()];
-      local name = Locale.Lookup(GameInfo.Civilizations[playerConfig:GetCivilizationTypeID()].Name);
-      AddFilter(name, function(a) return a:GetID() == pPlayer:GetID() end);
+    if ShouldAddToFilter(pPlayer) then
+      if pPlayer:IsMajor() then
+        local playerConfig:table = PlayerConfigurations[pPlayer:GetID()];
+        local name = Locale.Lookup(GameInfo.Civilizations[playerConfig:GetCivilizationTypeID()].Name);
+        AddFilter(name, function(a) return a:GetID() == pPlayer:GetID() end);
+      elseif not addedCityStateFilter then
+        -- Add "City States" Filter
+        AddFilter(Locale.Lookup("LOC_HUD_REPORTS_CITY_STATE"), IsCityState);
+        addedCityStateFilter = true
+      end
     end
   end
 
@@ -597,6 +622,18 @@ function OnFilterSelected( index:number, filterIndex:number )
 
   Refresh();
 end
+
+-- ===========================================================================
+function AddTopDistrictToolTips()
+  Controls.FilterCityCenterCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_CITY_CENTER_NAME"));
+  Controls.FilterCommericalHubCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_COMMERCIAL_HUB_NAME"));
+  Controls.FilterTheaterCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_THEATER_NAME"));
+  Controls.FilterCampusCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_CAMPUS_NAME"));
+  Controls.FilterIndustrialCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_INDUSTRIAL_ZONE_NAME"));
+  Controls.FilterNeighborhoodCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_NEIGHBORHOOD_NAME"));
+  Controls.FilterSpaceportCheckbox:SetToolTipString(Locale.Lookup("LOC_DISTRICT_SPACEPORT_NAME"));
+end
+
 
 -- ===========================================================================
 --  Called once during Init
@@ -819,7 +856,7 @@ function AddOffMapOperative(spy:table)
   local spyPlot:table = Map.GetPlot(spy.XLocation, spy.YLocation);
   local targetCity:table = Cities.GetPlotPurchaseCity(spyPlot);
   if targetCity then
-    operativeInstance.TravelDestinationName:SetText(Locale.Lookup("LOC_ESPIONAGEOVERVIEW_TRANSIT_TO", targetCity:GetName()));
+    TruncateStringWithTooltip(operativeInstance.TravelDestinationName, TRAVEL_DEST_TRUNCATE_WIDTH, Locale.Lookup("LOC_ESPIONAGEOVERVIEW_TRANSIT_TO", targetCity:GetName()));
   end
 
   operativeInstance.CityBanner:SetHide(true);
@@ -1114,5 +1151,6 @@ function Initialize()
   LuaEvents.GameDebug_Return.Add(OnGameDebugReturn);
 
   PopulateTabs();
+  AddTopDistrictToolTips();
 end
 Initialize();

@@ -112,13 +112,18 @@ function MoveUnitToPlot( kUnit:table, plotX:number, plotY:number )
     -- We may want to also skip the war check if the move will take more than one turn to get to the destination.
     local eAttackingPlayer:number = kUnit:GetOwner();
     local eUnitComponentID:table = kUnit:GetComponentID();
-    local bWillStartWar = PlayersVisibility[eAttackingPlayer]:IsVisible(plotX, plotY) and CombatManager.IsAttackChangeWarState(eUnitComponentID, plotX, plotY);
-    if (bWillStartWar) then
-      local eDefendingPlayer = CombatManager.GetBestDefender(eUnitComponentID, plotX, plotY );
-      if (eDefendingPlayer == nil) then
-        local pPlot = Map.GetPlot(plotX, plotY);
-        eDefendingPlayer = pPlot:GetOwner();
+    local bWillStartWar = false;
+    
+    local results:table;
+    if (PlayersVisibility[eAttackingPlayer]:IsVisible(plotX, plotY)) then
+      results = CombatManager.IsAttackChangeWarState(eUnitComponentID, plotX, plotY);
+      if (results ~= nil and #results > 0) then
+        bWillStartWar = true;
       end
+    end
+ 
+    if (bWillStartWar) then
+      local eDefendingPlayer = results[1];
       -- Create the action specific parameters
       if (eDefendingPlayer ~= nil and eDefendingPlayer ~= -1) then
         LuaEvents.Civ6Common_ConfirmWarDialog(eAttackingPlayer, eDefendingPlayer, WarTypes.SURPRISE_WAR);
@@ -143,7 +148,7 @@ function RequestMoveOperation( kUnit:table, tParameters:table, plotX:number, plo
     end
   else
     tParameters[UnitOperationTypes.PARAM_MODIFIERS] = UnitOperationMoveModifiers.NONE;
-    if (UnitManager.CanStartOperation( kUnit, UnitOperationTypes.RANGE_ATTACK, nil, tParameters) ) then
+    if (UnitManager.CanStartOperation( kUnit, UnitOperationTypes.RANGE_ATTACK, nil, tParameters)) then
       UnitManager.RequestOperation(kUnit, UnitOperationTypes.RANGE_ATTACK, tParameters);
     else
       -- Allow for attacking and don't early out if the destination is blocked, etc., but is in the fog.
@@ -245,6 +250,9 @@ function FilterUnitStats( hashOrType:number, ignoreStatType:number )
   if (unitInfo.BuildCharges > 0) then
     table.insert(data, {Value = unitInfo.BuildCharges, Type = "BuildCharges",   Label = "LOC_HUD_UNIT_PANEL_BUILDS",        FontIcon="[ICON_Charges_Large]",    IconName="ICON_BUILD_CHARGES"});
   end
+  if (unitInfo.ReligiousHealCharges > 0) then
+    table.insert(data, {Value = unitInfo.ReligiousHealCharges, Type = "ReligiousHealCharges",		Label = "LOC_HUD_UNIT_PANEL_HEALS",				FontIcon="[ICON_Charges_Large]",		IconName="ICON_RELIGION"});
+  end
 
   -- If we have more than 4 stats then try to remove melee strength
   if (table.count(data) > 4) then
@@ -286,16 +294,17 @@ function GetProductionInfoOfCity( pCity:table, productionHash:number )
 
   local hash            = productionHash;
   local progress          :number = 0;
-  local cost            :number = 0;
-  local percentComplete     :number = 0;
+  local cost              :number = 0;
+  local percentComplete   :number = 0;
   local percentCompleteNextTurn :number = 0;
-  local productionName      :string;
+  local productionName    :string;
   local description       :string;
-  local statString        :string;    -- stats for unit to display
-  local iconName          :string;    -- name of icon to look up
-  local texture         :string;    -- texture of icon
-  local u             :number = 0;  -- texture horiztonal offset
-  local v             :number = 0;  -- texture vertical offset
+  local tooltip					  :string; 
+  local statString        :string;      -- stats for unit to display
+  local iconName          :string;      -- name of icon to look up
+  local texture           :string;      -- texture of icon
+  local u                 :number = 0;  -- texture horiztonal offset
+  local v                 :number = 0;  -- texture vertical offset
 
   -- Nothing being produced.
   if hash == 0 then
@@ -324,6 +333,7 @@ function GetProductionInfoOfCity( pCity:table, productionHash:number )
     prodTurnsLeft = pBuildQueue:GetTurnsLeft(buildingDef.BuildingType);
     productionName  = Locale.Lookup(buildingDef.Name);
     description   = buildingDef.Description;
+    tooltip			= ToolTipHelper.GetBuildingToolTip(hash, Game.GetLocalPlayer(), pCity ) 
     progress    = pBuildQueue:GetBuildingProgress(buildingDef.Index);
     percentComplete = progress / pBuildQueue:GetBuildingCost(buildingDef.Index);
     cost      = pBuildQueue:GetBuildingCost(buildingDef.Index);
@@ -334,6 +344,7 @@ function GetProductionInfoOfCity( pCity:table, productionHash:number )
     prodTurnsLeft = pBuildQueue:GetTurnsLeft(districtDef.DistrictType);
     productionName  = Locale.Lookup(districtDef.Name);
     description   = districtDef.Description;
+    tooltip			= ToolTipHelper.GetDistrictToolTip(hash); 
     progress    = pBuildQueue:GetDistrictProgress(districtDef.Index);
     percentComplete = progress / pBuildQueue:GetDistrictCost(districtDef.Index);
     cost      = pBuildQueue:GetDistrictCost(districtDef.Index);
@@ -345,6 +356,7 @@ function GetProductionInfoOfCity( pCity:table, productionHash:number )
     local eMilitaryFormationType :number = pBuildQueue:GetCurrentProductionTypeModifier();
     productionName  = Locale.Lookup(unitDef.Name);
     description   = unitDef.Description;
+    tooltip			= ToolTipHelper.GetUnitToolTip(hash); 
     progress    = pBuildQueue:GetUnitProgress(unitDef.Index);
     prodTurnsLeft = pBuildQueue:GetTurnsLeft(unitDef.UnitType, eMilitaryFormationType);
     iconName    = "ICON_"..unitDef.UnitType.."_PORTRAIT";
@@ -377,6 +389,7 @@ function GetProductionInfoOfCity( pCity:table, productionHash:number )
     prodTurnsLeft = pBuildQueue:GetTurnsLeft(projectDef.ProjectType);
     productionName  = Locale.Lookup(projectDef.Name);
     description   = projectDef.Description;
+    tooltip			= ToolTipHelper.GetProjectToolTip(hash); 
     progress    = pBuildQueue:GetProjectProgress(projectDef.Index);
     cost      = pBuildQueue:GetProjectCost(projectDef.Index);
     percentComplete = progress / pBuildQueue:GetProjectCost(projectDef.Index);
@@ -401,14 +414,15 @@ function GetProductionInfoOfCity( pCity:table, productionHash:number )
 
   return {
     Name          = productionName,
-    Description       = description,
+    Description   = description,
+    Tooltip				= tooltip, 
     Type          = type;
     Icon          = iconName,
-    PercentComplete     = percentComplete,
+    PercentComplete         = percentComplete,
     PercentCompleteNextTurn = percentCompleteNextTurn,
     Turns         = prodTurnsLeft,
-    StatString        = statString;
-    Progress        = progress;
+    StatString    = statString;
+    Progress      = progress;
     Cost          = cost;
   };
 end
@@ -439,32 +453,32 @@ end
 -- ===========================================================================
 function GetUnitIcon( pUnit:table, iconSize:number )	
 
-	local iconInfo:table = {};
+  local iconInfo:table = {};
   if pUnit then
 
-		local unitIcon:string = nil;
+    local unitIcon:string = nil;
 
     local individual:number = pUnit:GetGreatPerson():GetIndividual();
     if individual >= 0 then
       local individualType:string = GameInfo.GreatPersonIndividuals[individual].GreatPersonIndividualType;
       local iconModifier:table = GameInfo.GreatPersonIndividualIconModifiers[individualType];
       if iconModifier then
-				unitIcon = iconModifier.OverrideUnitIcon;
+        unitIcon = iconModifier.OverrideUnitIcon;
       end
     end
 
-		if not unitIcon then
-			local unit:table = GameInfo.Units[pUnit:GetUnitType()];
-			unitIcon = "ICON_" .. unit.UnitType;
+    if not unitIcon then
+      local unit:table = GameInfo.Units[pUnit:GetUnitType()];
+      unitIcon = "ICON_" .. unit.UnitType;
     end
 
-		iconInfo.textureOffsetX, iconInfo.textureOffsetY, iconInfo.textureSheet = IconManager:FindIconAtlas(unitIcon, iconSize);
+    iconInfo.textureOffsetX, iconInfo.textureOffsetY, iconInfo.textureSheet = IconManager:FindIconAtlas(unitIcon, iconSize);
     if (iconInfo.textureSheet == nil) then      --Check to see if the unit has an icon atlas index defined
-			print("UIWARNING: Could not find icon for " .. unitIcon);
-			iconInfo.textureOffsetX, iconInfo.textureOffsetY, iconInfo.textureSheet = IconManager:FindIconAtlas("ICON_UNIT_UNKNOWN", iconSize);		--If not, resolve the index to be a generic unknown index
+      print("UIWARNING: Could not find icon for " .. unitIcon);
+      iconInfo.textureOffsetX, iconInfo.textureOffsetY, iconInfo.textureSheet = IconManager:FindIconAtlas("ICON_UNIT_UNKNOWN", iconSize);		--If not, resolve the index to be a generic unknown index
       end
     end
-	return iconInfo;
+  return iconInfo;
 end
 
 -- ===========================================================================
@@ -501,7 +515,7 @@ function AutoSizeGridButton(gridButton:table,minX: number, minY: number, padding
 end
 
 -- ===========================================================================
-function GetLeaderUniqueTraits( leaderType:string )
+function GetLeaderUniqueTraits( leaderType:string, useFullDescriptions:boolean )
 
   -- Gather info.
     local base_leader = GameInfo.Leaders[leaderType];
@@ -556,7 +570,7 @@ function GetLeaderUniqueTraits( leaderType:string )
       not_ability[trait] = true;
       if(has_trait[trait] == true) then
         local description :string = Locale.Lookup("LOC_LOADING_"..row.Domain);
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Units[row.UnitType].Description);
         end
         table.insert(uu, { Type = row.UnitType, Name = row.Name, Description = description });
@@ -573,7 +587,7 @@ function GetLeaderUniqueTraits( leaderType:string )
       if(has_trait[trait] == true) then
         local districtName:string = Locale.Lookup(GameInfo.Districts[row.PrereqDistrict].Name);
         local description :string = Locale.Lookup("LOC_LOADING_DISTRICT_BUILDING", districtName);
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Buildings[row.BuildingType].Description);
         end
         table.insert(ub, {Type = row.BuildingType, Name = row.Name, Description = description});
@@ -587,7 +601,7 @@ function GetLeaderUniqueTraits( leaderType:string )
       not_ability[trait] = true;
       if(has_trait[trait] == true) then
         local description :string = Locale.Lookup("LOC_LOADING_UNIQUE_DISTRICT");
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Districts[row.DistrictType].Description);
         end
         table.insert(ub, {Type = row.DistrictType, Name = row.Name, Description = description});
@@ -601,7 +615,7 @@ function GetLeaderUniqueTraits( leaderType:string )
       not_ability[trait] = true;
       if(has_trait[trait] == true) then
         local description :string = Locale.Lookup("LOC_LOADING_UNIQUE_IMPROVEMENT");
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Improvements[row.ImprovementType].Description);
         end
         table.insert(ub, {Type = row.ImprovementType, Name = row.Name, Description = description});
@@ -621,7 +635,7 @@ end
 
 
 -- ===========================================================================
-function GetCivilizationUniqueTraits( civType:string )
+function GetCivilizationUniqueTraits( civType:string, useFullDescriptions:boolean )
 
   local traits = {};
     for row in GameInfo.CivilizationTraits() do
@@ -645,7 +659,7 @@ function GetCivilizationUniqueTraits( civType:string )
       not_abilities[trait] = true;
       if(traits[trait] == true) then
         local description :string = Locale.Lookup("LOC_LOADING_"..row.Domain);
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Units[row.UnitType].Description);
         end
         table.insert(uu, { Type = row.UnitType, Name = row.Name, Description = description });
@@ -662,7 +676,7 @@ function GetCivilizationUniqueTraits( civType:string )
       if(traits[trait] == true) then
         local building    :table  = GameInfo.Buildings[row.BuildingType];
         local description :string = Locale.Lookup("LOC_LOADING_UNIQUE_BUILDING");
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           if building == nil then
             UI.DataError("Could not get CIV trait as GameInfo.Buildings["..row.BuildingType.."] does not exist.");
           elseif building.Description == nil then
@@ -682,7 +696,7 @@ function GetCivilizationUniqueTraits( civType:string )
       not_abilities[trait] = true;
       if(traits[trait] == true) then
         local description :string = Locale.Lookup("LOC_LOADING_UNIQUE_DISTRICT");
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Districts[row.DistrictType].Description);
         end
         table.insert(ub, {Type = row.DistrictType, Name = row.Name, Description = description});
@@ -696,7 +710,7 @@ function GetCivilizationUniqueTraits( civType:string )
       not_abilities[trait] = true;
       if(traits[trait] == true) then
         local description :string = Locale.Lookup("LOC_LOADING_UNIQUE_IMPROVEMENT");
-        if m_isTraitsFullDescriptions then
+        if m_isTraitsFullDescriptions or useFullDescriptions then
           description = Locale.Lookup(GameInfo.Improvements[row.ImprovementType].Description);
         end
         table.insert(ub, {Type = row.ImprovementType, Name = row.Name, Description = description});
@@ -722,17 +736,7 @@ end
 --  Is the on-rails tutorial active?
 -- ===========================================================================
 function IsTutorialRunning()
-  local mods = Modding.GetActiveMods();
-  if mods ~= nil then
-    for i,v in ipairs(mods) do
-      if v.Id == TUTORIAL_UUID then
-        return true;
-      end
-    end
-  else
-    UI.DataError("Unable to obtain mods table to determine if tutorial is running.");
-  end
-  return false;
+  return Modding.IsModActive(TUTORIAL_UUID); 
 end
 
 -- ===========================================================================
@@ -772,26 +776,23 @@ function DifferentiateCiv(playerID:number, tooltipControl:table, icon:table, ico
   end
 
   -- Set the leader name, civ name, and civ icon data
-  local leader:string = playerConfig:GetLeaderTypeName();
-  if GameInfo.CivilizationLeaders[leader] == nil then
-    UI.DataError("Banners found a leader \""..leader.."\" which is not/no longer in the game; icon may be whack.");
-  else
-    if(GameInfo.CivilizationLeaders[leader].CivilizationType ~= nil) then
+  local civTypeName = playerConfig:GetCivilizationTypeName();
+  if civTypeName ~= nil then
+    local civIcon:string;
+    local civTooltip:string;
+    if hasMet then
+      civIcon = "ICON_"..civTypeName;
 
-      local civIcon:string;
-      local civTooltip:string;
-      if hasMet then
-        local civTypeName = GameInfo.CivilizationLeaders[leader].CivilizationType;
-        local civName = Locale.Lookup(GameInfo.Civilizations[civTypeName].Name);
-        local leaderName = Locale.Lookup(GameInfo.Leaders[leader].Name);
+      local leaderTypeName:string = playerConfig:GetLeaderTypeName();
+      if leaderTypeName ~= nil then
+        local leaderName = Locale.Lookup(GameInfo.Leaders[leaderTypeName].Name);
         if GameConfiguration.IsAnyMultiplayer() and player:IsHuman() then
           local playerName = Locale.Lookup(playerConfig:GetPlayerName());
           leaderName = leaderName .. " ("..Locale.ToUpper(playerName)..")"
         end
 
-        civIcon = "ICON_"..civTypeName;
-
         --Create a tooltip which shows a list of this Civ's cities
+        local civName = Locale.Lookup(GameInfo.Civilizations[civTypeName].Name);
         civTooltip = civName .. "[NEWLINE]".. leaderName;
         local playerCities = player:GetCities();
         if(playerCities ~= nil) then
@@ -801,23 +802,26 @@ function DifferentiateCiv(playerID:number, tooltipControl:table, icon:table, ico
           end
         end
       else
-        civIcon = "ICON_LEADER_DEFAULT";
-        civTooltip = Locale.Lookup("LOC_DIPLOPANEL_UNMET_PLAYER");
-        if GameConfiguration.IsAnyMultiplayer() and player:IsHuman() then
-          local playerName = Locale.Lookup(playerConfig:GetPlayerName());
-          civTooltip = civTooltip .. " ("..Locale.ToUpper(playerName)..")";
-        end
-
+        UI.DataError("Invalid type name returned by GetLeaderTypeName");
       end
-
-      if (icon ~= nil) then
-        icon:SetIcon(civIcon);
+    else
+      civIcon = "ICON_LEADER_DEFAULT";
+      civTooltip = Locale.Lookup("LOC_DIPLOPANEL_UNMET_PLAYER");
+      if GameConfiguration.IsAnyMultiplayer() and player:IsHuman() then
+        local playerName = Locale.Lookup(playerConfig:GetPlayerName());
+        civTooltip = civTooltip .. " ("..Locale.ToUpper(playerName)..")";
       end
-      if (tooltipControl ~= nil) then
-        tooltipControl:SetToolTipString(Locale.Lookup(civTooltip));
-      end
-      return civTooltip;
     end
+
+    if (icon ~= nil) then
+      icon:SetIcon(civIcon);
+    end
+    if (tooltipControl ~= nil) then
+      tooltipControl:SetToolTipString(Locale.Lookup(civTooltip));
+    end
+    return civTooltip;
+  else
+    UI.DataError("Invalid type name returned by GetCivilizationTypeName");
   end
 end
 
@@ -1022,11 +1026,17 @@ end
 
 --Trims source information from gossip messages. Returns nil if the message couldn't be trimmed (this usually means the provided string wasn't a gossip message at all)
 function CQUI_TrimGossipMessage(str:string)
-  local sourceSample = Locale.Lookup("LOC_GOSSIP_SOURCE_DELEGATE", "X", "Y", "Z"); --Get a sample of a gossip source string
-  last = string.match(sourceSample, ".-(%s%S+)$"); --Get last word that occurs in the gossip source string. "that" in English. Assumes the last word is always the same, which it is in English, unsure if this holds true in other languages
+  local sourceSample = Locale.Lookup("LOC_GOSSIP_SOURCE_DELEGATE", "XX", "Y", "Z"); --Get a sample of a gossip source string
+  last = string.match(sourceSample, ".-XX.-(%s%S+)$"); --Get last word that occurs in the gossip source string. "that" in English. Assumes the last word is always the same, which it is in English, unsure if this holds true in other languages
+  -- AZURENCY : the patterns means : any character 0 or +, XX exactly, any character 0 or +, space, any character other than space 1 or + at the end of the sentence.
   -- AZURENCY : in some languages, there is no space, in that case, take the last character (often it's a ":")
   if last == nil then
     last = string.match(sourceSample, ".-(.)$");
+  end
+  -- AZURENCY : if last is still nill, it's not normal, print an error but still allow the code to run
+  if last == nil then
+    print("ERROR : LOC_GOSSIP_SOURCE_DELEGATE seems to be empty as last was still nil after the second pattern matching.")
+    last = ""
   end
   return Split(str, last .. " " , 2)[2]; --Get the rest of the string after the last word from the gossip source string
 end

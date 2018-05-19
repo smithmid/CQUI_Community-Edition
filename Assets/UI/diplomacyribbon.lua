@@ -14,16 +14,10 @@ local SCROLL_SPEED			:number = 3;
 local SIZE_LEADER			:number = 52;
 local PADDING_LEADER		:number = 3;
 local BG_PADDING_EDGE		:number = 20;
-local OFF_LEFT_ARROW		:number = 20;
-local OFF_LEFT_SCREEN		:number = 360;
 local RIGHT_HOOKS_INITIAL	:number	= 163;
 local MIN_LEFT_HOOKS		:number	= 260;
 local MINIMUM_BG_SIZE		:number = 100;
 local WORLD_TRACKER_OFFSET	:number	= 40;
-local BAR_PADDING			:number	= 50;
-
-local TEAM_RIBBON_SIZE		:number = 53;
-local TEAM_RIBBON_PREFIX	:string = "ICON_TEAM_RIBBON_";
 
 -- ===========================================================================
 --	VARIABLES
@@ -33,9 +27,11 @@ local m_scrollIndex			:number = 0; -- Index of leader that is supposed to be on 
 local m_scrollPercent		:number = 0; -- Necessary for scroll lerp
 local m_maxNumLeaders		:number = 0; -- Number of leaders that can fit in the ribbon
 local m_isScrolling			:boolean = false;
+local CQUI_IsDiploBannerOn = GameConfiguration.GetValue("CQUI_ShowDiploBanner"); --ARISTOS: controls the display of Diplo Banner
 local m_uiLeadersByID		:table = {};
 local m_uiChatIconsVisible	:table = {};
-local m_kLeaderIM			:table = InstanceManager:new("LeaderInstance", "LeaderContainer", Controls.LeaderStack);
+local m_kLeaderIM			:table = CQUI_IsDiploBannerOn and InstanceManager:new("LeaderInstance", "LeaderContainer", Controls.LeaderStack) 
+										or InstanceManager:new("LeaderInstanceNormal", "LeaderContainer", Controls.LeaderStack); --ARISTOS: to make Diplo Banner optional
 local m_PartialScreenHookBar: table;	-- = ContextPtr:LookUpControl( "/InGame/PartialScreenHooks/LaunchBacking" );
 local m_LaunchBar			: table;	-- = ContextPtr:LookUpControl( "/InGame/LaunchBar/LaunchBacking" );
 
@@ -52,6 +48,16 @@ function ResetLeaders()
   m_uiLeadersByID = {};
   m_kLeaderIM:ResetInstances();
 end
+
+--ARISTOS: Update Diplo Banner display status
+function CQUI_OnSettingsUpdate()
+  CQUI_IsDiploBannerOn = GameConfiguration.GetValue("CQUI_ShowDiploBanner");
+  ResetLeaders();
+  m_kLeaderIM = CQUI_IsDiploBannerOn and InstanceManager:new("LeaderInstance", "LeaderContainer", Controls.LeaderStack) 
+										or InstanceManager:new("LeaderInstanceNormal", "LeaderContainer", Controls.LeaderStack); --ARISTOS: to make Diplo Banner optional
+  UpdateLeaders();
+end
+LuaEvents.CQUI_SettingsUpdate.Add( CQUI_OnSettingsUpdate );
 
 -- ===========================================================================
 function OnLeaderClicked(playerID : number )
@@ -73,13 +79,15 @@ function OnLeaderRightClicked(ms_SelectedPlayerID : number )
   local pPlayer = Players[ms_LocalPlayerID];
   local iPlayerDiploState = pPlayer:GetDiplomaticAI():GetDiplomaticStateIndex(ms_SelectedPlayerID);
   local relationshipHash = GameInfo.DiplomaticStates[iPlayerDiploState].Hash;
+  --ARISTOS: to check if Peace Deal is valid
+  local bValidAction, tResults = pPlayer:GetDiplomacy():IsDiplomaticActionValid("DIPLOACTION_PROPOSE_PEACE_DEAL", ms_SelectedPlayerID, true); --ARISTOS
   if (not (relationshipHash == DiplomaticStates.WAR)) then
     if (not DealManager.HasPendingDeal(ms_LocalPlayerID, ms_SelectedPlayerID)) then
       DealManager.ClearWorkingDeal(DealDirection.OUTGOING, ms_LocalPlayerID, ms_SelectedPlayerID);
     end
     DiplomacyManager.RequestSession(ms_LocalPlayerID, ms_SelectedPlayerID, "MAKE_DEAL");
-  --ARISTOS: To make Right Click on leader go directly to peace deal
-  else
+  --ARISTOS: To make Right Click on leader go directly to peace deal if Peace Deal is valid
+  elseif bValidAction then
     if (not DealManager.HasPendingDeal(ms_LocalPlayerID, ms_SelectedPlayerID)) then
       DealManager.ClearWorkingDeal(DealDirection.OUTGOING, ms_LocalPlayerID, ms_SelectedPlayerID);
       local pDeal = DealManager.GetWorkingDeal(DealDirection.OUTGOING, ms_LocalPlayerID, ms_SelectedPlayerID);
@@ -157,6 +165,7 @@ end
 function AddLeader(iconName : string, playerID : number, isUniqueLeader: boolean)
   m_leadersMet = m_leadersMet + 1;
 
+  local pPlayer:table = Players[playerID];	  
   local pPlayerConfig:table = PlayerConfigurations[playerID];
   local isHuman:boolean = pPlayerConfig:IsHuman();
 
@@ -171,11 +180,40 @@ function AddLeader(iconName : string, playerID : number, isUniqueLeader: boolean
   leaderIcon:RegisterCallback( Mouse.eMouseExit, function() OnLeaderMouseExit(); end );
   leaderIcon:RegisterCallback( Mouse.eMClick, function() OnLeaderMouseOver(playerID); end ); --ARISTOS
 
-  -- CQUI: Set score values for DRS display
-  instance.CQUI_ScoreOverall:SetText("[ICON_Capital]"..Players[playerID]:GetScore());
-  instance.CQUI_ScienceRate:SetText("[ICON_Science]"..Round(Players[playerID]:GetTechs():GetScienceYield(),0));
-  instance.CQUI_MilitaryStrength:SetText("[ICON_Strength]"..Players[playerID]:GetStats():GetMilitaryStrength());
+  local bShowRelationshipIcon:boolean = false;
+  local localPlayerID:number = Game.GetLocalPlayer();
 
+  if(playerID == localPlayerID) then
+    instance.YouIndicator:SetHide(false);
+  else
+    -- Set relationship status (for non-local players)
+    local diplomaticAI:table = pPlayer:GetDiplomaticAI();
+    local relationshipStateID:number = diplomaticAI:GetDiplomaticStateIndex(localPlayerID);
+    if relationshipStateID ~= -1 then
+      local relationshipState:table = GameInfo.DiplomaticStates[relationshipStateID];
+      -- Always show relationship icon for AIs, only show player triggered states for humans
+      if not isHuman or IsValidRelationship(relationshipState.StateType) then
+        --!! ARISTOS: to extend relationship tooltip to include diplo modifiers!
+        local extendedRelationshipTooltip:string = Locale.Lookup(relationshipState.Name)
+        .. "[NEWLINE][NEWLINE]" .. RelationshipGet(playerID);
+        -- KWG: This is bad, there is a piece of art that is tied to the order of a database entry.  Please fix!
+        instance.Relationship:SetVisState(relationshipStateID);
+        instance.Relationship:SetToolTipString(extendedRelationshipTooltip);
+        bShowRelationshipIcon = true;
+      end
+    end
+    instance.YouIndicator:SetHide(true);
+  end
+
+  -- CQUI: Set score values for DRS display
+  --ARISTOS: only if Diplo Banner ON
+  if CQUI_IsDiploBannerOn then
+	  instance.CQUI_ScoreOverall:SetText("[ICON_Capital]"..Players[playerID]:GetScore());
+	  instance.CQUI_ScienceRate:SetText("[ICON_Science]"..Round(Players[playerID]:GetTechs():GetScienceYield(),0));
+	  instance.CQUI_MilitaryStrength:SetText("[ICON_Strength]"..Players[playerID]:GetStats():GetMilitaryStrength());
+  end
+
+  instance.Relationship:SetHide(not bShowRelationshipIcon);
   -- Set the tooltip
   if(pPlayerConfig ~= nil) then
     local leaderTypeName:string = pPlayerConfig:GetLeaderTypeName();
@@ -188,6 +226,9 @@ function AddLeader(iconName : string, playerID : number, isUniqueLeader: boolean
       end
     end
   end
+
+  -- Returning these so mods can override them and modify the icons
+	return leaderIcon, instance;
 end
 
 --ARISTOS: To display key information in leader tooltip inside Diplo Ribbon
@@ -204,9 +245,15 @@ function GetExtendedTooltip(playerID:number)
   for i,city in cities:Members() do
     numCities = numCities + 1;
   end
+  --ARISTOS: Add gold to tooltip
+  local playerTreasury:table	= Players[playerID]:GetTreasury();
+  local goldBalance	:number = math.floor(playerTreasury:GetGoldBalance());
+  local goldYield	:number = math.floor((playerTreasury:GetGoldYield() - playerTreasury:GetTotalMaintenance()));
+  
   local civData:string = "[NEWLINE]"..Locale.Lookup("LOC_DIPLOMACY_INTEL_GOVERNMENT").." "..govType
     .."[NEWLINE]"..Locale.Lookup("LOC_PEDIA_CONCEPTS_PAGEGROUP_CITIES_NAME").. ": "..numCities
     .."[NEWLINE][ICON_Capital] "..Locale.Lookup("LOC_WORLD_RANKINGS_OVERVIEW_DOMINATION_SCORE", Players[playerID]:GetScore())
+	.."[NEWLINE][ICON_Gold] "..goldBalance.." / " .. (goldYield>0 and "+" or "") .. (goldYield>0 and goldYield or "?")
     .."[NEWLINE]"..Locale.Lookup("LOC_WORLD_RANKINGS_OVERVIEW_SCIENCE_SCIENCE_RATE", Round(Players[playerID]:GetTechs():GetScienceYield(),1))
     .."[NEWLINE][ICON_Science] "..Locale.Lookup("LOC_WORLD_RANKINGS_OVERVIEW_SCIENCE_NUM_TECHS", Players[playerID]:GetStats():GetNumTechsResearched())
     .."[NEWLINE]"..Locale.Lookup("LOC_WORLD_RANKINGS_OVERVIEW_CULTURE_CULTURE_RATE", Round(Players[playerID]:GetCulture():GetCultureYield(),1))
@@ -621,6 +668,7 @@ function Initialize()
   LuaEvents.WorldTracker_OnChatShown.Add(OnChatPanelShown);
   LuaEvents.LaunchBar_Resize.Add(RealizeSize);
   LuaEvents.PartialScreenHooks_Resize.Add(RealizeSize);
+  LuaEvents.CQUI_SettingsInitialized.Add(CQUI_OnSettingsUpdate);
 
   Controls.NextButton:RegisterCallback( Mouse.eLClick, OnScrollLeft );
   Controls.PreviousButton:RegisterCallback( Mouse.eLClick, OnScrollRight );

@@ -1,13 +1,15 @@
 # Community Quick User Interface (CQUI)
 > CQUI is an open source Civilization 6 mod that is maintened by it's community
 
-CQUI is an UI mod that helps you manage your empire faster and easier. It's an enhancement of the original UI that gives you the informations you need with less clicks. It also have a lot of usefull fonctionnality that makes the game even better.
+CQUI is an UI mod that helps you manage your empire faster and easier. It's an enhancement of the original UI that gives you the informations you need with less clicks. It also have a lot of usefull functionnality that makes the game even better.
 
 This repository is the official repository of the [CQUI steam mod](http://steamcommunity.com/sharedfiles/filedetails/?id=1125169247).
 
 ![cquiscreens](https://user-images.githubusercontent.com/8012430/31862026-75c5822e-b737-11e7-9ac3-afe993e26eb6.jpg)
 
 ## Installation
+
+_**Note for Mac/Linux users :** as the latest patch is still not avaible to your platform, please follow the manual installation steps with this version of CQUI : https://github.com/Azurency/CQUI_Community-Edition/releases/tag/mac-1.0.0.220_
 
 ### Steam Workshop
 If you want to install the latest official version, you can go to the [steam workshop page](http://steamcommunity.com/sharedfiles/filedetails/?id=1125169247) of CQUI and add it to your game.
@@ -191,7 +193,7 @@ This section should not always be up to date, so don't hesitate to check the mil
 ## Contributing
 > This part still need some love
 
-You want to contribute to the mod ? We're always welcoming new contributors and the pull request are open if you wish to tacle an issue. Some issues are labeled "easy" it should be a great entry point if you want to join the team.
+You want to contribute to the mod ? We're always welcoming new contributors and the pull request are open if you wish to tacle an issue. Some issues are labeled "easy" it should be a great entry point if you want to join the team. A comprehensive [contribution guide](https://github.com/CQUI-Org/cqui/wiki/How-to-contribute-to-CQUI) created for the predecessor of this mod is a good starting point.
 
 ### Quick coding style
 - Please use 2 spaces for indentation

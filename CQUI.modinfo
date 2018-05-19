@@ -3,12 +3,13 @@
 
   <!-- Basic Mod Information -->
   <Properties>
+    <AffectsSavedGames>0</AffectsSavedGames>
     <Name>Community Quick User Interface</Name>
     <Teaser>CQUI</Teaser>
     <Description>Community Quick User Interface MOD was Formally CQUI Mod [NEWLINE]and is now being updated and improved by its community</Description>
   </Properties>
 
-  <!--Incompatible mods.-->  
+  <!--Incompatible mods.-->
   <Blocks>
     <Mod id="9e9923e5-6842-4e7d-97e7-c9a56a85cf03" title="Simplified Gossip" />
     <Mod id="37b5fdca-2690-96ff-ea23-d8612ae7a757" title="Divine Yuri's Custom City Panel" />
@@ -18,7 +19,7 @@
     <Mod id="35f33319-ad93-4d6b-bf27-406fac382d06" title="More Lenses" />
     <Mod id="c9d28cde-61ee-459c-93f5-c734cd392553" title="NQ Enhanced User Interface" />
   </Blocks>
-  
+
   <!-- Modinfo Specific LOC -->
   <LocalizedText>
     <Text id="CQUI_TEASER">
@@ -27,9 +28,10 @@
       <zh_Hans_CN>一键化操作，轻松管理您的帝国</zh_Hans_CN>
       <pl_PL>Zmniejsz ilość kliknięć i spraw by zarządzanie imperium było łatwiejsze.</pl_PL>
       <ru_RU>Убирает лишние клики и облегчает управление империей</ru_RU>
-      <de_DE>Reduziert die Anzahl der Klicks und macht das CIV-Management einfach.</de_DE>
+      <de_DE>Reduziert die Anzahl der Klicks und vereinfacht das Civ-Management.</de_DE>
       <it_IT>Riduce i click e facilita la gestione dell'impero.</it_IT>
       <ko_KR>문명 게임 플레이를 더욱 간편하게 해주는 CQUI 모드입니다</ko_KR>
+      <pt_BR>Reduz cliques e facilita o gerencimento do império</pt_BR>
     </Text>
   </LocalizedText>
 
@@ -45,24 +47,36 @@
     <File>Assets/cqui_toplayer.xml</File>
     <File>Assets/cqui_toplayer.lua</File>
     <File>Assets/Text/Gossip_Text.xml</File>
+    <File>Assets/Text/Gossip_Text_de.xml</File>
+    <File>Assets/Text/Gossip_Text_ja.xml</File>
+    <File>Assets/Text/Gossip_Text_pt.xml</File>
+    <File>Assets/Text/Gossip_Text_it.xml</File>
+    <File>Assets/Text/cqui_InGameText.xml</File>
+    <File>Assets/Text/cqui_InGameText_de.xml</File>
+    <File>Assets/Text/cqui_InGameText_ja.xml</File>
+    <File>Assets/Text/cqui_InGameText_it.xml</File>
     <File>Assets/Text/cqui_text_general.xml</File>
     <File>Assets/Text/cqui_text_general_de.xml</File>
+    <File>Assets/Text/cqui_text_general_es.xml</File>
     <File>Assets/Text/cqui_text_general_fr.xml</File>
     <File>Assets/Text/cqui_text_general_it.xml</File>
+    <File>Assets/Text/cqui_text_general_ja.xml</File>
     <File>Assets/Text/cqui_text_general_ko.xml</File>
     <File>Assets/Text/cqui_text_general_pl.xml</File>
+    <File>Assets/Text/cqui_text_general_pt.xml</File>
     <File>Assets/Text/cqui_text_general_ru.xml</File>
     <File>Assets/Text/cqui_text_general_zh.xml</File>
-    <File>Assets/Text/cqui_text_general_es.xml</File>
     <File>Assets/Text/cqui_text_settings.xml</File>
     <File>Assets/Text/cqui_text_settings_de.xml</File>
+    <File>Assets/Text/cqui_text_settings_es.xml</File>
     <File>Assets/Text/cqui_text_settings_fr.xml</File>
     <File>Assets/Text/cqui_text_settings_it.xml</File>
+    <File>Assets/Text/cqui_text_settings_ja.xml</File>
     <File>Assets/Text/cqui_text_settings_ko.xml</File>
     <File>Assets/Text/cqui_text_settings_pl.xml</File>
+    <File>Assets/Text/cqui_text_settings_pt.xml</File>
     <File>Assets/Text/cqui_text_settings_ru.xml</File>
     <File>Assets/Text/cqui_text_settings_zh.xml</File>
-    <File>Assets/Text/cqui_text_settings_es.xml</File>
     <File>Assets/UI/actionpanel.lua</File>
     <File>Assets/UI/citysupport.lua</File>
     <File>Assets/UI/civ6common.lua</File>
@@ -117,6 +131,7 @@
     <File>Assets/UI/Popups/policyreminderpopup.lua</File>
     <File>Assets/UI/Popups/policyreminderpopup.xml</File>
     <File>Assets/UI/Popups/techciviccompletedpopup.lua</File>
+    <File>Assets/UI/Popups/wonderbuiltpopup.lua</File>
     <File>Assets/UI/Screens/civicstree.lua</File>
     <File>Assets/UI/Screens/governmentscreen.lua</File>
     <File>Assets/UI/Screens/governmentscreen.xml</File>
@@ -137,58 +152,91 @@
     <File>Integrations/BTS/UI/Choosers/tradeoriginchooser.lua</File>
     <File>Integrations/BTS/Text/bts_text.xml</File>
     <File>Integrations/BTS/Text/bts_text_de.xml</File>
+    <File>Integrations/BTS/Text/bts_text_es.xml</File>
     <File>Integrations/BTS/Text/bts_text_fr.xml</File>
     <File>Integrations/BTS/Text/bts_text_it.xml</File>
+    <File>Integrations/BTS/Text/bts_text_ja.xml</File>
     <File>Integrations/BTS/Text/bts_text_ko.xml</File>
     <File>Integrations/BTS/Text/bts_text_pl.xml</File>
+    <File>Integrations/BTS/Text/bts_text_pt.xml</File>
     <File>Integrations/BTS/Text/bts_text_ru.xml</File>
     <File>Integrations/BTS/Text/bts_text_zh.xml</File>
-    <File>Integrations/BTS/Text/bts_text_es.xml</File>
     <File>Integrations/URS/reportscreen.lua</File>
     <File>Integrations/URS/reportscreen.xml</File>
     <File>Integrations/URS/unitpromotionpopup.lua</File>
     <File>Integrations/URS/Text/urs_text.xml</File>
     <File>Integrations/URS/Text/urs_text_de.xml</File>
+    <File>Integrations/URS/Text/urs_text_es.xml</File>
     <File>Integrations/URS/Text/urs_text_fr.xml</File>
     <File>Integrations/URS/Text/urs_text_it.xml</File>
+    <File>Integrations/URS/Text/urs_text_ja.xml</File>
     <File>Integrations/URS/Text/urs_text_ko.xml</File>
     <File>Integrations/URS/Text/urs_text_pl.xml</File>
+    <File>Integrations/URS/Text/urs_text_pt.xml</File>
     <File>Integrations/URS/Text/urs_text_ru.xml</File>
     <File>Integrations/URS/Text/urs_text_zh.xml</File>
-    <File>Integrations/URS/Text/urs_text_es.xml</File>
     <File>Integrations/IDS/diplomacydealview.lua</File>
     <File>Integrations/IDS/diplomacydealview.xml</File>
     <File>Integrations/IDS/Text/ids_text.xml</File>
     <File>Integrations/IDS/Text/ids_text_de.xml</File>
+    <File>Integrations/IDS/Text/ids_text_es.xml</File>
     <File>Integrations/IDS/Text/ids_text_fr.xml</File>
     <File>Integrations/IDS/Text/ids_text_it.xml</File>
+    <File>Integrations/IDS/Text/ids_text_ja.xml</File>
     <File>Integrations/IDS/Text/ids_text_ko.xml</File>
     <File>Integrations/IDS/Text/ids_text_pl.xml</File>
+    <File>Integrations/IDS/Text/ids_text_pt.xml</File>
     <File>Integrations/IDS/Text/ids_text_ru.xml</File>
     <File>Integrations/IDS/Text/ids_text_zh.xml</File>
-    <File>Integrations/IDS/Text/ids_text_es.xml</File>
+    <File>Integrations/ML/Text/morelenses_text.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_de.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_es.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_fr.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_it.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_ja.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_ko.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_pl.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_pt.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_ru.xml</File>
+    <File>Integrations/ML/Text/morelenses_text_zh.xml</File>
     <File>Integrations/ML/UI/minimappanel.lua</File>
     <File>Integrations/ML/UI/minimappanel.xml</File>
     <File>Integrations/ML/UI/Panels/modallenspanel.lua</File>
     <File>Integrations/ML/UI/Panels/modallenspanel.xml</File>
     <File>Integrations/ML/morelenses_colors.sql</File>
-    <File>Integrations/ML/Text/morelenses_text.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_de.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_fr.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_it.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_ko.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_pl.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_ru.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_zh.xml</File>
-    <File>Integrations/ML/Text/morelenses_text_es.xml</File>
+    <File>Integrations/ML/UI/lenssupport.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_builder.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_scout.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_archaeologist.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_barbarian.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_adjacencyyield.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_naturalist.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_wonder.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_cityoverlap.xml</File>
+    <File>Integrations/ML/UI/Lenses/modlens_cityoverlap.lua</File>
+    <File>Integrations/ML/UI/Lenses/modlens_resource.xml</File>
+    <File>Integrations/ML/UI/Lenses/modlens_resource.lua</File>
     <File>Integrations/BES/UI/espionagesupport.lua</File>
     <File>Integrations/BES/UI/Choosers/espionagechooser.lua</File>
     <File>Integrations/BES/UI/Choosers/espionagechooser.xml</File>
     <File>Integrations/BES/UI/PartialScreens/espionageoverview.lua</File>
     <File>Integrations/BES/UI/PartialScreens/espionageoverview.xml</File>
+    <File>Integrations/BES/Expansion1/Replacements/espionagechooser_expansion1.lua</File>
+    <File>Integrations/BES/Expansion1/Replacements/espionageoverview_expansion1.lua</File>
     <File>Integrations/BES/Text/bes_text.xml</File>
+    <File>Integrations/BES/Text/bes_text_de.xml</File>
     <File>Integrations/BES/Text/bes_text_es.xml</File>
+    <File>Integrations/BES/Text/bes_text_it.xml</File>
+    <File>Integrations/BES/Text/bes_text_ja.xml</File>
+    <File>Integrations/BES/Text/bes_text_pt.xml</File>
+    <File>Integrations/BES/Text/bes_text_ru.xml</File>
   </Files>
+
+  <ActionCriteria>
+    <Criteria id="Expansion1">
+      <GameCoreInUse>Expansion1</GameCoreInUse>
+    </Criteria>
+  </ActionCriteria>
 
   <Components>
     <ImportFiles id="CQUI_IMPORT_FILES">
@@ -245,6 +293,7 @@
         <File>Assets/UI/Popups/mappinpopup.lua</File>
         <File>Assets/UI/Popups/mappinpopup.xml</File>
         <File>Assets/UI/Popups/techciviccompletedpopup.lua</File>
+        <File>Assets/UI/Popups/wonderbuiltpopup.lua</File>
         <File>Assets/UI/Screens/techtree.lua</File>
         <File>Assets/UI/Screens/civicstree.lua</File>
         <File>Assets/UI/Screens/governmentscreen.lua</File>
@@ -258,32 +307,41 @@
         <File>Assets/UI/WorldView/plotinfo.xml</File>
       </Items>
     </ImportFiles>
-	
+
     <!-- CQUI specific LOCs  -->
     <LocalizedText id="CQUI_TEXT">
       <Items>
-	    <File>Assets/Text/Gossip_Text.xml</File>
+        <File>Assets/Text/Gossip_Text.xml</File>
+        <File>Assets/Text/Gossip_Text_ja.xml</File>
+        <File>Assets/Text/Gossip_Text_pt.xml</File>
+        <File>Assets/Text/cqui_InGameText.xml</File>
+        <File>Assets/Text/cqui_InGameText_de.xml</File>
+        <File>Assets/Text/cqui_InGameText_ja.xml</File>
         <File>Assets/Text/cqui_text_general.xml</File>
         <File>Assets/Text/cqui_text_general_de.xml</File>
+        <File>Assets/Text/cqui_text_general_es.xml</File>
         <File>Assets/Text/cqui_text_general_fr.xml</File>
         <File>Assets/Text/cqui_text_general_it.xml</File>
+        <File>Assets/Text/cqui_text_general_ja.xml</File>
         <File>Assets/Text/cqui_text_general_ko.xml</File>
         <File>Assets/Text/cqui_text_general_pl.xml</File>
+        <File>Assets/Text/cqui_text_general_pt.xml</File>
         <File>Assets/Text/cqui_text_general_ru.xml</File>
         <File>Assets/Text/cqui_text_general_zh.xml</File>
-        <File>Assets/Text/cqui_text_general_es.xml</File>
         <File>Assets/Text/cqui_text_settings.xml</File>
         <File>Assets/Text/cqui_text_settings_de.xml</File>
+        <File>Assets/Text/cqui_text_settings_es.xml</File>
         <File>Assets/Text/cqui_text_settings_fr.xml</File>
         <File>Assets/Text/cqui_text_settings_it.xml</File>
+        <File>Assets/Text/cqui_text_settings_ja.xml</File>
         <File>Assets/Text/cqui_text_settings_ko.xml</File>
         <File>Assets/Text/cqui_text_settings_pl.xml</File>
+        <File>Assets/Text/cqui_text_settings_pt.xml</File>
         <File>Assets/Text/cqui_text_settings_ru.xml</File>
         <File>Assets/Text/cqui_text_settings_zh.xml</File>
-        <File>Assets/Text/cqui_text_settings_es.xml</File>
       </Items>
     </LocalizedText>
-	
+
     <!-- CQUI specific settings -->
     <UpdateDatabase id="CQUI_Settings">
       <Properties>
@@ -295,7 +353,7 @@
         <File>Assets/cqui_settings_local.sql</File>
       </Items>
     </UpdateDatabase>
-	
+
     <!-- CQUI specific UIs -->
     <UserInterface id="CQUI_UI">
       <Properties>
@@ -308,33 +366,36 @@
         <!--the lua files are taken as implied-->
       </Items>
     </UserInterface>
-	
+
     <!-- CQUI specific scripts -->
     <GameplayScripts id="CQUI_SCRIPTS">
       <Items>
         <File>Assets/cqui_main.lua</File>
       </Items>
     </GameplayScripts>
-	
+
     <!-- CQUI specific art overrides -->
     <ModArt id="CQUI_MODART">
       <Items>
         <File>cqui.dep</File>
       </Items>
     </ModArt>
-    
+
     <!-- Mod integrations -->
+    <!-- BTS -->
     <LocalizedText id="BTS_TEXT">
       <Items>
         <File>Integrations/BTS/Text/bts_text.xml</File>
         <File>Integrations/BTS/Text/bts_text_de.xml</File>
+        <File>Integrations/BTS/Text/bts_text_es.xml</File>
         <File>Integrations/BTS/Text/bts_text_fr.xml</File>
         <File>Integrations/BTS/Text/bts_text_it.xml</File>
+        <File>Integrations/BTS/Text/bts_text_ja.xml</File>
         <File>Integrations/BTS/Text/bts_text_ko.xml</File>
         <File>Integrations/BTS/Text/bts_text_pl.xml</File>
+        <File>Integrations/BTS/Text/bts_text_pt.xml</File>
         <File>Integrations/BTS/Text/bts_text_ru.xml</File>
         <File>Integrations/BTS/Text/bts_text_zh.xml</File>
-        <File>Integrations/BTS/Text/bts_text_es.xml</File>
       </Items>
     </LocalizedText>
     <ImportFiles id="BTS_IMPORT_FILES">
@@ -348,17 +409,21 @@
         <File>Integrations/BTS/UI/Choosers/tradeoriginchooser.lua</File>
       </Items>
     </ImportFiles>
+
+    <!-- UNITREPORT -->
     <LocalizedText id="UNITREPORT_TEXT">
       <Items>
         <File>Integrations/URS/Text/urs_text.xml</File>
         <File>Integrations/URS/Text/urs_text_de.xml</File>
+        <File>Integrations/URS/Text/urs_text_es.xml</File>
         <File>Integrations/URS/Text/urs_text_fr.xml</File>
         <File>Integrations/URS/Text/urs_text_it.xml</File>
+        <File>Integrations/URS/Text/urs_text_ja.xml</File>
         <File>Integrations/URS/Text/urs_text_ko.xml</File>
         <File>Integrations/URS/Text/urs_text_pl.xml</File>
+        <File>Integrations/URS/Text/urs_text_pt.xml</File>
         <File>Integrations/URS/Text/urs_text_ru.xml</File>
         <File>Integrations/URS/Text/urs_text_zh.xml</File>
-        <File>Integrations/URS/Text/urs_text_es.xml</File>
       </Items>
     </LocalizedText>
     <ImportFiles id="UNITREPORT_IMPORT_FILES">
@@ -368,26 +433,32 @@
         <File>Integrations/URS/unitpromotionpopup.lua</File>
       </Items>
     </ImportFiles>
-  <ImportFiles id="IDS_IMPORT_FILES">
+
+    <!-- IDS -->
+    <ImportFiles id="IDS_IMPORT_FILES">
       <Items>
         <File>Integrations/IDS/diplomacydealview.lua</File>
         <File>Integrations/IDS/diplomacydealview.xml</File>
       </Items>
     </ImportFiles>
-  <LocalizedText id="IDS_TEXT">
+    <LocalizedText id="IDS_TEXT">
       <Items>
         <File>Integrations/IDS/Text/ids_text.xml</File>
         <File>Integrations/IDS/Text/ids_text_de.xml</File>
+        <File>Integrations/IDS/Text/ids_text_es.xml</File>
         <File>Integrations/IDS/Text/ids_text_fr.xml</File>
         <File>Integrations/IDS/Text/ids_text_it.xml</File>
+        <File>Integrations/IDS/Text/ids_text_ja.xml</File>
         <File>Integrations/IDS/Text/ids_text_ko.xml</File>
         <File>Integrations/IDS/Text/ids_text_pl.xml</File>
+        <File>Integrations/IDS/Text/ids_text_pt.xml</File>
         <File>Integrations/IDS/Text/ids_text_ru.xml</File>
         <File>Integrations/IDS/Text/ids_text_zh.xml</File>
-        <File>Integrations/IDS/Text/ids_text_es.xml</File>
       </Items>
     </LocalizedText>
-  <ImportFiles id="BES_IMPORT_FILES">
+
+    <!-- BES -->
+    <ImportFiles id="BES_IMPORT_FILES">
       <Items>
         <File>Integrations/BES/UI/espionagesupport.lua</File>
         <File>Integrations/BES/UI/Choosers/espionagechooser.lua</File>
@@ -396,12 +467,61 @@
         <File>Integrations/BES/UI/PartialScreens/espionageoverview.xml</File>
       </Items>
     </ImportFiles>
+    <ImportFiles id="BES_EXPANSION1_FILES" criteria="Expansion1">
+      <Items>
+        <File>Integrations/BES/Expansion1/Replacements/espionagechooser_expansion1.lua</File>
+        <File>Integrations/BES/Expansion1/Replacements/espionageoverview_expansion1.lua</File>
+      </Items>
+    </ImportFiles>
     <LocalizedText id="BES_TEXT">
       <Items>
-        <File>Integrations/BES/Text/bes_text.xml</File>
+        <File Priority="1">Integrations/BES/Text/bes_text.xml</File>
+        <File>Integrations/BES/Text/bes_text_de.xml</File>
+        <File>Integrations/BES/Text/bes_text_es.xml</File>
+        <File>Integrations/BES/Text/bes_text_it.xml</File>
+        <File>Integrations/BES/Text/bes_text_ja.xml</File>
+        <File>Integrations/BES/Text/bes_text_pt.xml</File>
+        <File>Integrations/BES/Text/bes_text_ru.xml</File>
       </Items>
     </LocalizedText>
+
+    <!-- ML -->
+    <ImportFiles id="MORELENSES_LENSES">
+      <Properties>
+        <LoadOrder>0</LoadOrder>
+        <Context>InGame</Context>
+      </Properties>
+      <Items>
+        <!-- Support file first -->
+        <File Priority="1">Integrations/ML/UI/lenssupport.lua</File>
+
+        <!-- All Lenses later -->
+        <File>Integrations/ML/UI/Lenses/modlens_builder.lua</File>
+        <File>Integrations/ML/UI/Lenses/modlens_scout.lua</File>
+        <File>Integrations/ML/UI/Lenses/modlens_archaeologist.lua</File>
+        <File>Integrations/ML/UI/Lenses/modlens_barbarian.lua</File>
+        <File>Integrations/ML/UI/Lenses/modlens_adjacencyYield.lua</File>
+        <File>Integrations/ML/UI/Lenses/modlens_naturalist.lua</File>
+        <File>Integrations/ML/UI/Lenses/modlens_wonder.lua</File>
+      </Items>
+    </ImportFiles>
+    <AddUserInterfaces id="MORELENSES_LENSES_WPANEL">
+      <Properties>
+        <Context>InGame</Context>
+        <LoadOrder>1</LoadOrder>
+      </Properties>
+      <Items>
+        <File>Integrations/ML/UI/Lenses/modlens_cityoverlap.xml</File>
+        <!-- ModLens_CityOverlap.lua implied -->
+        <File>Integrations/ML/UI/Lenses/modlens_resource.xml</File>
+        <!-- ModLens_Resource.lua implied -->
+      </Items>
+    </AddUserInterfaces>
     <ImportFiles id="MORELENSES_IMPORT_FILES">
+      <!-- ML replacements after all lens files imported -->
+      <Properties>
+        <LoadOrder>2</LoadOrder>
+      </Properties>
       <Items>
         <File>Integrations/ML/UI/minimappanel.lua</File>
         <File>Integrations/ML/UI/minimappanel.xml</File>
@@ -413,13 +533,15 @@
       <Items>
         <File>Integrations/ML/Text/morelenses_text.xml</File>
         <File>Integrations/ML/Text/morelenses_text_de.xml</File>
+        <File>Integrations/ML/Text/morelenses_text_es.xml</File>
         <File>Integrations/ML/Text/morelenses_text_fr.xml</File>
         <File>Integrations/ML/Text/morelenses_text_it.xml</File>
+        <File>Integrations/ML/Text/morelenses_text_ja.xml</File>
         <File>Integrations/ML/Text/morelenses_text_ko.xml</File>
         <File>Integrations/ML/Text/morelenses_text_pl.xml</File>
+        <File>Integrations/ML/Text/morelenses_text_pt.xml</File>
         <File>Integrations/ML/Text/morelenses_text_ru.xml</File>
         <File>Integrations/ML/Text/morelenses_text_zh.xml</File>
-        <File>Integrations/ML/Text/morelenses_text_es.xml</File>
       </Items>
     </LocalizedText>
     <UpdateDatabase id="MORELENSES_DATABASE">
@@ -428,5 +550,6 @@
       </Items>
     </UpdateDatabase>
   </Components>
+
   <Settings />
 </Mod>

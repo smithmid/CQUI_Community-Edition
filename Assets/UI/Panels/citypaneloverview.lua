@@ -1,10 +1,6 @@
 --CityPanelOverview
 --Triggered by selecting a city
 
--- Include self contained additional tabs
-g_AdditionalTabData = {};
-include("CityPanelTab_", true);
-
 include( "AdjacencyBonusSupport" );   -- GetAdjacentYieldBonusString()
 include( "Civ6Common" );        -- GetYieldString()
 include( "InstanceManager" );
@@ -16,15 +12,16 @@ include( "TabSupport" );
 --  CONSTANTS
 -- ===========================================================================
 local DATA_DOMINANT_RELIGION    :string = "_DOMINANTRELIGION";
-local SIZE_LEADER_ICON        :number = 32;
+local SIZE_LEADER_ICON          :number = 32;
+local SIZE_CITYSTATE_ICON			  :number = 30;
 local SIZE_PRODUCTION_ICON      :number = 32; -- TODO: Switch this to 38 when the icons go in.
-local SIZE_PANEL_X          :number = 300;
-local TXT_NO_PRODUCTION       :string = Locale.Lookup("LOC_HUD_CITY_PRODUCTION_NOTHING_PRODUCED");
+local SIZE_PANEL_X              :number = 300;
+local TXT_NO_PRODUCTION         :string = Locale.Lookup("LOC_HUD_CITY_PRODUCTION_NOTHING_PRODUCED");
 
 local UV_CITIZEN_GROWTH_STATUS    :table  = {};
-    UV_CITIZEN_GROWTH_STATUS[0] = {u=0, v=0  };   -- revolt
-    UV_CITIZEN_GROWTH_STATUS[1] = {u=0, v=0 };    -- unrest
-    UV_CITIZEN_GROWTH_STATUS[2] = {u=0, v=0};   -- unhappy
+    UV_CITIZEN_GROWTH_STATUS[0] = {u=0, v=0};     -- revolt
+    UV_CITIZEN_GROWTH_STATUS[1] = {u=0, v=0};     -- unrest
+    UV_CITIZEN_GROWTH_STATUS[2] = {u=0, v=0};     -- unhappy
     UV_CITIZEN_GROWTH_STATUS[3] = {u=0, v=50};    -- displeased
     UV_CITIZEN_GROWTH_STATUS[4] = {u=0, v=100};   -- content (normal)
     UV_CITIZEN_GROWTH_STATUS[5] = {u=0, v=150};   -- happy
@@ -32,7 +29,7 @@ local UV_CITIZEN_GROWTH_STATUS    :table  = {};
     UV_CITIZEN_GROWTH_STATUS[7] = {u=0, v=200};   -- jubilant
 
 local UV_HOUSING_GROWTH_STATUS    :table = {};
-    UV_HOUSING_GROWTH_STATUS[0] = {u=0, v=0};   -- halted
+    UV_HOUSING_GROWTH_STATUS[0] = {u=0, v=0};     -- halted
     UV_HOUSING_GROWTH_STATUS[1] = {u=0, v=50};    -- slowed
     UV_HOUSING_GROWTH_STATUS[2] = {u=0, v=100};   -- normal
 
@@ -53,32 +50,38 @@ local YIELD_STATE :table = {
 --  VARIABLES
 -- ===========================================================================
 
-local m_kAmenitiesIM    :table  = InstanceManager:new( "CQUI_BubbleInstance",     "Top", Controls.AmenityStack );
-local m_kBuildingsIM    :table  = InstanceManager:new( "BuildingInstance",      "Top");
-local m_kDistrictsIM    :table  = InstanceManager:new( "DistrictInstance",      "Top", Controls.BuildingAndDistrictsStack );
-local m_kHousingIM      :table  = InstanceManager:new( "CQUI_BubbleInstance",     "Top", Controls.HousingStack );
-local m_kOtherReligionsIM :table  = InstanceManager:new( "OtherReligionInstance",   "Top", Controls.OtherReligions );
-local m_kProductionIM   :table  = InstanceManager:new( "ProductionInstance",    "Top", Controls.ProductionQueueStack );
-local m_kReligionsBeliefsIM :table  = InstanceManager:new( "ReligionBeliefsInstance", "Top", Controls.ReligionBeliefsStack );
-local m_kTradingPostsIM   :table  = InstanceManager:new( "TradingPostInstance",   "Top", Controls.TradingPostsStack );
-local m_kWondersIM      :table  = InstanceManager:new( "WonderInstance",      "Top", Controls.WondersStack );
-local m_kTabButtonIM		:table	= InstanceManager:new( "TabButtonInstance",		"Button", Controls.TabContainer );
+m_kAmenitiesIM = InstanceManager:new( "CQUI_BubbleInstance",     "Top", Controls.AmenityStack );
+local m_kBuildingsIM = InstanceManager:new( "BuildingInstance",      "Top");
+local m_kDistrictsIM = InstanceManager:new( "DistrictInstance",      "Top", Controls.BuildingAndDistrictsStack );
+local m_kHousingIM = InstanceManager:new( "CQUI_BubbleInstance",     "Top", Controls.HousingStack );
+local m_kOtherReligionsIM = InstanceManager:new( "OtherReligionInstance",   "Top", Controls.OtherReligions );
+local m_kProductionIM = InstanceManager:new( "ProductionInstance",    "Top", Controls.ProductionQueueStack );
+local m_kReligionsBeliefsIM = InstanceManager:new( "ReligionBeliefsInstance", "Top", Controls.ReligionBeliefsStack );
+local m_kTradingPostsIM = InstanceManager:new( "TradingPostInstance",   "Top", Controls.TradingPostsStack );
+local m_kWondersIM = InstanceManager:new( "WonderInstance",      "Top", Controls.WondersStack );
 
-local m_kData       :table  = nil;
-local m_isDirty       :boolean= false;
-local m_isInitializing    :boolean= false;
-local m_isShowingPanels   :boolean= false;
-local m_pCity       :table  = nil;
-local m_pPlayer       :table  = nil;
-local m_primaryColor    :number = 0xcafef00d;
-local m_secondaryColor    :number = 0xf00d1ace;
+local m_kData = nil;
+local m_isInitializing = false;
+local m_isShowingPanels = false;
+local m_pCity = nil;
+local m_pPlayer = nil;
+local m_primaryColor = 0xcafef00d;
+local m_secondaryColor = 0xf00d1ace;
+-- CQUI : replaced Default by CityManagement
+local m_desiredLens = "CityManagement";
 
 local ms_eventID = 0;
-local m_tabs;
-local m_isShowingPanel    :boolean = false;
+local m_isShowingPanel = false;
+
+-- ===========================================================================
+--	GLOBALS
+-- ===========================================================================
+m_kTabButtonIM = InstanceManager:new( "TabButtonInstance", "Button", Controls.TabContainer );
+m_tabs = nil;
+
 
 --CQUI Members
-local CQUI_HousingFromImprovementsTable :table = {};
+local CQUI_HousingFromImprovementsTable = {};
 local CQUI_ShowCityDetailAdvisor :boolean = false;
 
 function CQUI_OnSettingsUpdate()
@@ -101,6 +104,39 @@ LuaEvents.CQUI_SettingsInitialized.Add(CQUI_OnSettingsUpdate);
   LuaEvents.CQUI_CityPanelOverview_CityviewDisable.Add( CQUI_OnCityviewDisabled);
 
 -- ===========================================================================
+
+-- HACK: Something in the event city selection event chain is overriding the active lens after we open this screen
+--       Check lens next frame to ensure we end up with the correct lens active
+-- TODO: We need to do figure out why this is happening, having it reactivate the lens every frame does not play well
+--       with everywhere else that uses lenses, border growth, minimap panel, religious units, etc.
+function SetDesiredLens(desiredLens)
+  m_desiredLens = desiredLens;
+  -- AZURENCY : don't change interface mode
+  --UI.SetInterfaceMode(InterfaceModeTypes.SELECTION);
+  if m_isShowingPanel then
+    if m_desiredLens == "CityManagement" then
+      UILens.SetActive("Appeal");
+      LuaEvents.CQUI_RefreshCitizenManagement(m_pCity:GetID());
+    else
+      UILens.SetActive(m_desiredLens);
+    end
+    ContextPtr:SetUpdate(EnsureDesiredLens);
+  else
+    UILens.SetActive(m_desiredLens);
+  end
+end
+
+function EnsureDesiredLens()
+  if m_isShowingPanel then
+    if m_desiredLens == "CityManagement" then
+      UILens.SetActive("Appeal");
+      LuaEvents.CQUI_RefreshCitizenManagement(m_pCity:GetID());
+    else
+      UILens.SetActive(m_desiredLens);
+    end
+  end
+  ContextPtr:ClearUpdate();
+end
 
 function UpdateYieldData( data:table )
   data.CulturePerTurn       = Round( m_pCity:GetYield( YieldTypes.CULTURE ), 1);
@@ -131,18 +167,6 @@ function HideAll()
   Controls.BuildingsIcon:SetColorByName("White");
   Controls.ReligionButton:SetSelected(false);
   Controls.ReligionIcon:SetColorByName("White");
-  --Controls.QueueButton:SetSelected(false);
-  --Controls.QueueIcon:SetColorByName("White");
-  --Controls.StrengthButton:SetSelected(false);
-  --Controls.StrengthIcon:SetColorByName("White");
-
-  -- Loop through dynamic tab buttons deselecting them and setting them to color White
-  for _,tabData in pairs(g_AdditionalTabData) do
-    if tabData.ButtonInstance then
-      tabData.ButtonInstance.Button:SetSelected(false);
-      tabData.ButtonInstance.Icon:SetColorByName("White");
-    end
-  end
 
   Controls.PanelBreakdown:SetHide(true);
   Controls.PanelReligion:SetHide(true);
@@ -153,28 +177,7 @@ function HideAll()
   Controls.PanelQueue:SetHide(true);
   Controls.PanelDynamicTab:SetHide(true);
 
-  --UILens.ToggleLayerOff(LensLayers.ADJACENCY_BONUS_DISTRICTS);
-  --UILens.ToggleLayerOff(LensLayers.DISTRICTS);
-end
-
-function CalculateSizeAndAccomodate(scrollPanelControl: table, stackControl: table)
-  local adjustedSizeX;
-  stackControl:CalculateSize();
-  stackControl:ReprocessAnchoring();
-  scrollPanelControl:CalculateSize();
-
-  if(scrollPanelControl:GetRatio()<1) then
-    adjustedSizeX = SIZE_PANEL_X-12;
-  else
-    adjustedSizeX = SIZE_PANEL_X;
-  end
-  scrollPanelControl:SetSizeX(adjustedSizeX);
-  stackControl:SetSizeX(adjustedSizeX);
-
-  scrollPanelControl:CalculateSize();
-
-  stackControl:CalculateSize();
-  stackControl:ReprocessAnchoring();
+  SetDesiredLens("CityManagement");
 end
 
 function OnSelectHealthTab()
@@ -192,8 +195,6 @@ function OnSelectHealthTab()
   Controls.PanelAmenities:SetHide(false);
   Controls.PanelHousing:SetHide(false);
   Controls.PanelCitizensGrowth:SetHide(false);
-
-  CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
 end
 
 function OnSelectBuildingsTab()
@@ -207,11 +208,6 @@ function OnSelectBuildingsTab()
     ViewPanelBreakdown( m_kData );
   end
   Controls.PanelBreakdown:SetHide(false);
-
-  --UILens.ToggleLayerOn(LensLayers.ADJACENCY_BONUS_DISTRICTS);
-  --UILens.ToggleLayerOn(LensLayers.DISTRICTS);
-
-  CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
 end
 function OnSelectReligionTab()
   HideAll();
@@ -219,34 +215,12 @@ function OnSelectReligionTab()
   Controls.ReligionIcon:SetColorByName("DarkBlue");
   UI.PlaySound("UI_CityPanel_ButtonClick");
 
+  Controls.PanelReligion:SetHide(false);
+
   if(m_kData ~= nil) then
     ViewPanelReligion( m_kData );
   end
-  Controls.PanelReligion:SetHide(false);
-
-  CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
 end
-
---function OnSelectQueueTab()
---  HideAll();
---  Controls.QueueButton:SetSelected(true);
---  Controls.QueueIcon:SetColorByName("DarkBlue");
---  UI.PlaySound("UI_CityPanel_ButtonClick");
-
---  if(m_kData ~= nil) then
---    ViewPanelQueue( m_kData );
---  end
---  Controls.PanelQueue:SetHide(false);
---  CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
---end
-
---function OnSelectStrengthTab()
---  HideAll();
---  UI.PlaySound("UI_CityPanel_ButtonClick");
---  Controls.StrengthButton:SetSelected(true);
---  Controls.StrengthIcon:SetColorByName("DarkBlue");
---  CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
---end
 
 -- ===========================================================================
 function ViewPanelBreakdown( data:table )
@@ -258,6 +232,7 @@ function ViewPanelBreakdown( data:table )
   m_kDistrictsIM:ResetInstances();
   m_kTradingPostsIM:ResetInstances();
   m_kWondersIM:ResetInstances();
+  local playerID = Game.GetLocalPlayer();
 
   -- Add districts (and their buildings)
   for _, district in ipairs(data.BuildingsAndDistricts) do
@@ -270,6 +245,8 @@ function ViewPanelBreakdown( data:table )
       kInstanceDistrict.DistrictName:SetText( districtName );
       kInstanceDistrict.DistrictYield:SetText( district.YieldBonus );
       kInstanceDistrict.Icon:SetIcon( district.Icon );
+      local sToolTip = ToolTipHelper.GetToolTip(district.Type, playerID)
+      kInstanceDistrict.Top:SetToolTipString( sToolTip);
       for _,building in ipairs(district.Buildings) do
         if building.isBuilt then
           local kInstanceBuild:table = m_kBuildingsIM:GetInstance(kInstanceDistrict.BuildingStack);
@@ -279,22 +256,27 @@ function ViewPanelBreakdown( data:table )
           end
           kInstanceBuild.BuildingName:SetText( buildingName );
           kInstanceBuild.Icon:SetIcon( building.Icon );
+          local pRow = GameInfo.Buildings[building.Type];
+          local sToolTip = ToolTipHelper.GetBuildingToolTip( pRow.Hash, playerID, m_pCity );
+          kInstanceBuild.Top:SetToolTipString( sToolTip);
           local yieldString:string = "";
           for _,kYield in ipairs(building.Yields) do
             yieldString = yieldString .. GetYieldString(kYield.YieldType,kYield.YieldChange);
           end
           kInstanceBuild.BuildingYield:SetText( yieldString );
+          kInstanceBuild.BuildingYield:SetTruncateWidth( kInstanceBuild.Top:GetSizeX() - kInstanceBuild.BuildingName:GetSizeX() - 10 );
         end
       end
       kInstanceDistrict.BuildingStack:CalculateSize();
-      kInstanceDistrict.BuildingStack:ReprocessAnchoring();
     end
   end
 
   -- Add wonders
+  local hideWondersInfo :boolean = not GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_WONDERS");
   local isHasWonders :boolean = (table.count(data.Wonders) > 0)
-  Controls.NoWondersArea:SetHide( isHasWonders );
-  Controls.WondersArea:SetHide( not isHasWonders );
+  Controls.NoWondersArea:SetHide(hideWondersInfo or isHasWonders);
+  Controls.WondersArea:SetHide(hideWondersInfo or not isHasWonders);
+  Controls.WondersHeader:SetHide(hideWondersInfo);
 
   for _, wonder in ipairs(data.Wonders) do
     local kInstanceWonder:table = m_kWondersIM:GetInstance();
@@ -308,27 +290,44 @@ function ViewPanelBreakdown( data:table )
   end
 
   -- Add trading posts
+  local hideTradingPostsInfo :boolean = not GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_TRADING_POSTS");
   local isHasTradingPosts :boolean = (table.count(data.TradingPosts) > 0)
-  Controls.NoTradingPostsArea:SetHide( isHasTradingPosts );
-  Controls.TradingPostsArea:SetHide( not isHasTradingPosts );
+  Controls.NoTradingPostsArea:SetHide(hideTradingPostsInfo or isHasTradingPosts);
+  Controls.TradingPostsArea:SetHide(hideTradingPostsInfo or not isHasTradingPosts);
+  Controls.TradingPostsHeader:SetHide(hideTradingPostsInfo);
 
   if isHasTradingPosts then
     for _, tradePostPlayerId in ipairs(data.TradingPosts) do
+      local pTradePostPlayer:table = Players[tradePostPlayerId]
+      local pTradePostPlayerConfig:table = PlayerConfigurations[tradePostPlayerId];
       local kInstanceTradingPost  :table = m_kTradingPostsIM:GetInstance();
-      local playerName      :string = Locale.Lookup( PlayerConfigurations[tradePostPlayerId]:GetPlayerName() );
-      local iconName        :string = "ICON_"..PlayerConfigurations[tradePostPlayerId]:GetLeaderTypeName();
-      local textureOffsetX :number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(iconName, SIZE_LEADER_ICON);
+      local playerName			:string = Locale.Lookup( pTradePostPlayerConfig:GetPlayerName() );
 
+      local iconName:string = "";
+      local iconSize:number = SIZE_LEADER_ICON;
+      local iconColor = 0xFFFFFFFF;
+      if pTradePostPlayer:IsMinor() then
+        -- If we're a city-state display our city-state icon instead of leader since we don't have one
+        local civType:string = pTradePostPlayerConfig:GetCivilizationTypeName();
+        local primaryColor, secondaryColor = UI.GetPlayerColors(tradePostPlayerId);
+        iconName = "ICON_"..civType;
+        iconColor = secondaryColor;
+        iconSize = SIZE_CITYSTATE_ICON;
+      else
+        iconName = "ICON_"..pTradePostPlayerConfig:GetLeaderTypeName();
+      end
+
+      local textureOffsetX :number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(iconName, iconSize);
       kInstanceTradingPost.LeaderPortrait:SetTexture(textureOffsetX, textureOffsetY, textureSheet);
+      kInstanceTradingPost.LeaderPortrait:SetColor(iconColor);
       kInstanceTradingPost.LeaderPortrait:SetHide(false);
+
       if tradePostPlayerId == m_pPlayer:GetID() then
         playerName = playerName .. " (" .. Locale.Lookup("LOC_HUD_CITY_YOU") .. ")";
       end
       kInstanceTradingPost.TradingPostName:SetText( playerName );
     end
   end
-
-  Controls.PanelBreakdown:ReprocessAnchoring();
 end
 
 
@@ -359,39 +358,51 @@ function ViewPanelReligion( data:table )
       kBeliefInstance.Top:SetToolTipString( Locale.Lookup(kBelief.Description) );
     end
 
+    -- AZURENCY : fix the DominantReligionGrid being hidden at each turn of the loop
+    --            Should not be required after 1.0.0.216
+    -- Controls.DominantReligionGrid:SetHide(true);
 
-    for _,religion in ipairs(data.Religions) do
+    -- Dominant religion
+    local dominateReligion:table = nil;
+    if data.Religions and data.Religions[DATA_DOMINANT_RELIGION] then
+      dominateReligion = data.Religions[DATA_DOMINANT_RELIGION];
+      local religionName	:string = Game.GetReligion():GetName(dominateReligion.ID);
+      local iconName		:string = "ICON_" .. dominateReligion.ReligionType;
+      local textureOffsetX:number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(iconName, 22);
 
-      local religionName  :string = Game.GetReligion():GetName(religion.ID);
-      local iconName    :string = "ICON_" .. religion.ReligionType;
-      local textureOffsetX:number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(iconName);
-
+      Controls.DominantReligionGrid:SetHide(false);
+      Controls.DominantReligionSymbol:SetHide(false);
+      Controls.DominantReligionSymbol:SetTexture( textureSheet );
+      Controls.DominantReligionSymbol:SetTextureOffsetVal( textureOffsetX, textureOffsetY );
+      Controls.DominantReligionName:SetText( Locale.Lookup("LOC_HUD_CITY_RELIGIOUS_CITIZENS_NUMBER",dominateReligion.Followers,religionName) );
+      Controls.DominantReligionGrid:SetHide(false);
+    else
       Controls.DominantReligionGrid:SetHide(true);
-      if textureSheet ~= nil then
-        if religion == data.Religions[DATA_DOMINANT_RELIGION] then
-          -- Dominant religion
-          Controls.DominantReligionGrid:SetHide(false);
-          Controls.DominantReligionSymbol:SetHide(false);
-          Controls.DominantReligionSymbol:SetTexture( textureSheet );
-          Controls.DominantReligionSymbol:SetTextureOffsetVal( textureOffsetX, textureOffsetY );
-          Controls.DominantReligionName:SetText( Locale.Lookup("LOC_HUD_CITY_RELIGIOUS_CITIZENS_NUMBER",religion.Followers,religionName) );
-        elseif religion.ReligionType ~= "RELIGION_PANTHEON" then
-          -- Other religion
+    end
+
+    -- Other religions
+    for _,religion in ipairs(data.Religions) do
+      -- Don't show pantheons or dominate religions here. Dominate religion is handled above.
+      if religion.ReligionType ~= "RELIGION_PANTHEON" and (dominateReligion == nil or religion.ReligionType ~= dominateReligion.ReligionType) then
+        local religionName	:string = Game.GetReligion():GetName(religion.ID);
+        local iconName		:string = "ICON_" .. religion.ReligionType;
+        local textureOffsetX:number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(iconName, 22);
+
+        if textureSheet ~= nil then
           local religionInstance:table = m_kOtherReligionsIM:GetInstance();
           religionInstance.ReligionSymbol:SetTexture( textureSheet );
           religionInstance.ReligionSymbol:SetTextureOffsetVal( textureOffsetX, textureOffsetY );
           religionInstance.ReligionName:SetText( Locale.Lookup("LOC_HUD_CITY_RELIGIOUS_CITIZENS_NUMBER",religion.Followers,religionName) );
+        else
+          error("Unable to find texture "..iconName.." in a texture sheet for a CityPanel's religion symbol.");
         end
-      else
-        error("Unable to find texture "..iconName.." in a texture sheet for a CityPanel's religion symbol.");
       end
-
     end
-
-  else
-
   end
-  Controls.PanelReligion:ReprocessAnchoring();
+
+  if Controls.PanelReligion:IsVisible() then
+    SetDesiredLens("Religion");
+  end
 end
 
 -- ===========================================================================
@@ -490,24 +501,35 @@ function ViewPanelAmenities( data:table )
   --Luxuries
   CQUI_BuildAmenityBubbleInstance("ICON_IMPROVEMENT_BEACH_RESORT", data.AmenitiesFromLuxuries, "LOC_PEDIA_RESOURCES_PAGEGROUP_LUXURY_NAME");
   --Civics
-  CQUI_BuildAmenityBubbleInstance("ICON_NOTIFICATION_CONSIDER_GOVERNMENT_CHANGE", data.AmenitiesFromCivics, "LOC_CATEGORY_CIVICS_NAME");
-  --Entertainment
+  if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_AMENITIES_CIVICS") then
+    CQUI_BuildAmenityBubbleInstance("ICON_NOTIFICATION_CONSIDER_GOVERNMENT_CHANGE", data.AmenitiesFromCivics, "LOC_CATEGORY_CIVICS_NAME");
+  end
+    --Entertainment
   CQUI_BuildAmenityBubbleInstance("ICON_PROJECT_CARNIVAL", data.AmenitiesFromEntertainment, "LOC_CQUI_CITY_ENTERTAINMENT");
   --Great People
-  CQUI_BuildAmenityBubbleInstance("ICON_NOTIFICATION_CLAIM_GREAT_PERSON", data.AmenitiesFromGreatPeople, "LOC_PEDIA_CONCEPTS_PAGEGROUP_GREATPEOPLE_NAME");
+  if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_AMENITIES_GREAT_PEOPLE") then
+    CQUI_BuildAmenityBubbleInstance("ICON_NOTIFICATION_CLAIM_GREAT_PERSON", data.AmenitiesFromGreatPeople, "LOC_PEDIA_CONCEPTS_PAGEGROUP_GREATPEOPLE_NAME");
+  end
   --Relgion
-  CQUI_BuildAmenityBubbleInstance("ICON_UNITOPERATION_FOUND_RELIGION", data.AmenitiesFromReligion, "LOC_UI_RELIGION_TITLE");
-  --National Parks
-  CQUI_BuildAmenityBubbleInstance("ICON_UNITOPERATION_DESIGNATE_PARK", data.AmenitiesFromNationalParks, "LOC_PEDIA_CONCEPTS_PAGE_TOURISM_4_CHAPTER_CONTENT_TITLE");
+  if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_AMENITIES_RELIGION") then
+    CQUI_BuildAmenityBubbleInstance("ICON_UNITOPERATION_FOUND_RELIGION", data.AmenitiesFromReligion, "LOC_UI_RELIGION_TITLE");
+  end
+    --National Parks
+  if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_AMENITIES_NATIONAL_PARKS") then
+    CQUI_BuildAmenityBubbleInstance("ICON_UNITOPERATION_DESIGNATE_PARK", data.AmenitiesFromNationalParks, "LOC_PEDIA_CONCEPTS_PAGE_TOURISM_4_CHAPTER_CONTENT_TITLE");
+  end
   --War Weariness
-  CQUI_BuildAmenityBubbleInstance("ICON_UNITOPERATION_FORTIFY", (data.AmenitiesLostFromWarWeariness>0 and -data.AmenitiesLostFromWarWeariness or 0), "LOC_PEDIA_CONCEPTS_PAGE_COMBAT_3_CHAPTER_CONTENT_TITLE");
-  --Bankruptcy
-  CQUI_BuildAmenityBubbleInstance("ICON_NOTIFICATION_TREASURY_BANKRUPT", (data.AmenitiesLostFromBankruptcy>0 and -data.AmenitiesLostFromBankruptcy or 0), "LOC_PEDIA_CONCEPTS_PAGE_GOLD_4_CHAPTER_CONTENT_TITLE");
+  if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_AMENITIES_WAR_WEARINESS") then
+    CQUI_BuildAmenityBubbleInstance("ICON_UNITOPERATION_FORTIFY", (data.AmenitiesLostFromWarWeariness>0 and -data.AmenitiesLostFromWarWeariness or 0), "LOC_PEDIA_CONCEPTS_PAGE_COMBAT_3_CHAPTER_CONTENT_TITLE");
+  end
+    --Bankruptcy
+  if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_AMENITIES_BANKRUPTCY") then
+    CQUI_BuildAmenityBubbleInstance("ICON_NOTIFICATION_TREASURY_BANKRUPT", (data.AmenitiesLostFromBankruptcy>0 and -data.AmenitiesLostFromBankruptcy or 0), "LOC_PEDIA_CONCEPTS_PAGE_GOLD_4_CHAPTER_CONTENT_TITLE");
+  end
 
   Controls.AmenitiesRequiredNum:SetText( Locale.ToNumber(data.AmenitiesRequiredNum) );
   Controls.CitizenGrowthStatus:SetTextureOffsetVal( UV_CITIZEN_GROWTH_STATUS[data.Happiness].u, UV_CITIZEN_GROWTH_STATUS[data.Happiness].v );
   Controls.CitizenGrowthStatusIcon:SetColorByName( colorName );
-  Controls.PanelAmenities:ReprocessAnchoring();
 end
 
 -- ===========================================================================
@@ -573,8 +595,6 @@ function ViewPanelHousing( data:table )
   Controls.HousingStatusIcon:SetColorByName( colorName );
 
   Controls.HousingAdvice:SetText(data.HousingAdvice);
-
-  Controls.PanelHousing:ReprocessAnchoring();
 end
 
 -- ===========================================================================
@@ -666,8 +686,6 @@ function ViewPanelCitizensGrowth( data:table )
   Controls.TotalFoodSurplus:SetText( totalString );
   Controls.CitizensStarving:SetHide( data.TurnsUntilGrowth > -1);
   UpdateCitizenGrowthStatusIcon( data.TurnsUntilGrowth );
-
-  Controls.PanelCitizensGrowth:ReprocessAnchoring();
 end
 
 -- ===========================================================================
@@ -694,7 +712,6 @@ function ViewPanelProductionNow( data:table )
   end
 
   Controls.ProductionDescription:SetText( data.CurrentProductionDescription );
-  Controls.PanelProductionNow:ReprocessAnchoring();
 end
 
 
@@ -706,8 +723,6 @@ function CreateQueueItem( index:number, kProductionInfo:table )
     function()
       m_kProductionIM:ReleaseInstance( kInstance );
       Controls.PanelStack:CalculateSize();
-      Controls.PanelStack:ReprocessAnchoring();
-      Controls.PanelStack:ReprocessAnchoring(); -- Because of all the autosizing, the anchoring must be processed twice.
     end
   );
   if (kProductionInfo.Icon ~= nil) then
@@ -756,28 +771,10 @@ function PopulateTabs()
     m_tabs = CreateTabs( Controls.TabContainer,44,44);
     m_tabs.AddTab( Controls.HealthButton,   OnSelectHealthTab );
     m_tabs.AddTab( Controls.BuildingsButton,  OnSelectBuildingsTab );
-    m_tabs.AddTab( Controls.ReligionButton,   OnSelectReligionTab );
-
-    for _,tabData in pairs(g_AdditionalTabData) do
-      tabData.ButtonInstance = m_kTabButtonIM:GetInstance();
-      tabData.ButtonInstance.Icon:SetIcon(tabData.ButtonIcon);
-      tabData.ButtonInstance.Button:SetToolTipString(Locale.Lookup(tabData.ToolTip));
-
-      m_tabs.AddTab(tabData.ButtonInstance.Button, function()
-        HideAll();
-
-        -- Context has to be shown before CityPanelTabRefresh to ensure a proper Refresh
-        tabData.Context:SetHide(false);
-
-        tabData.ButtonInstance.Button:SetSelected(true);
-        tabData.ButtonInstance.Icon:SetColorByName(tabData.ButtonColor);
-        UI.PlaySound("UI_CityPanel_ButtonClick");
-        LuaEvents.CityPanelTabRefresh();
-
-        Controls.PanelDynamicTab:SetHide(false);
-
-        CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
-      end);
+    if GameCapabilities.HasCapability("CAPABILITY_CITY_HUD_RELIGION_TAB") then
+      m_tabs.AddTab( Controls.ReligionButton,		OnSelectReligionTab );
+    else
+      Controls.ReligionButton:SetHide(true);
     end
 
     m_tabs.CenterAlignTabs(0);
@@ -786,13 +783,8 @@ function PopulateTabs()
   m_tabs.AddAnimDeco(Controls.TabAnim, Controls.TabArrow);
 end
 
-
 function AutoSizeControls()
   local screenX, screenY:number = UIManager:GetScreenSizeVal()
-end
-
-function Resize()
-
 end
 
 function Close()
@@ -803,6 +795,7 @@ function Close()
   if not Controls.OverviewSlide:IsReversing() then
     Controls.OverviewSlide:Reverse();
     UI.PlaySound("UI_CityPanel_Closed");
+    SetDesiredLens("Default");
   end
 end
 
@@ -814,9 +807,11 @@ function OnCloseButtonClicked()
   LuaEvents.CQUI_CityPanel_CityviewDisable();
 end
 
-function View(data)
-  if (m_isDirty) then
-    Controls.OverviewSubheader:SetText(Locale.ToUpper(Locale.Lookup(data.CityName)));
+function ViewBase(data)
+  Controls.OverviewSubheader:SetText(Locale.ToUpper(Locale.Lookup(data.CityName)));
+
+  local canChangeName = GameCapabilities.HasCapability("CAPABILITY_RENAME");
+  if(canChangeName) then
     Controls.RenameCityButton:RegisterCallback(Mouse.eLClick, function()
       Controls.OverviewSubheader:SetHide(true);
 
@@ -831,29 +826,28 @@ function View(data)
       Controls.EditCityName:SetHide(true);
       Controls.OverviewSubheader:SetHide(false);
     end);
-    ViewPanelAmenities( data );
-    ViewPanelCitizensGrowth( data );
-    ViewPanelHousing( data );
-    ViewPanelBreakdown( data );
-    ViewPanelReligion( data );
-    ViewPanelQueue( data );
-    CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
-    m_isDirty = false;
+    Controls.RenameCityButton:SetDisabled(false);
+  else
+    Controls.RenameCityButton:SetDisabled(true);
   end
 end
 
 function Refresh()
   -- Only refresh if panel is visible
-  if (m_isShowingPanel) then
-    local eLocalPlayer :number = Game.GetLocalPlayer();
-    m_pPlayer= Players[eLocalPlayer];
-    m_pCity  = UI.GetHeadSelectedCity();
+  if m_isShowingPanel then
+    m_pPlayer = Players[Game.GetLocalPlayer()];
+    m_pCity	  = UI.GetHeadSelectedCity();
+
+    if m_kData == nil then
+      return;
+    end
 
     if m_pPlayer ~= nil and m_pCity ~= nil then
-      if m_kData == nil then
-        return;
+      -- Trigger selection callback
+      ViewBase( m_kData );
+      if m_tabs.selectedControl then
+        m_tabs.SelectTab(m_tabs.selectedControl);
       end
-      View( m_kData );
     end
   end
 end
@@ -892,8 +886,6 @@ function OnLiveCityDataChanged( data:table, isSelected:boolean)
     Close();
   else
     m_kData = data;
-    m_isDirty = true;
-    --ContextPtr:SetHide(false);
     Refresh();
   end
 end
@@ -923,7 +915,6 @@ function OnPolicyChanged( ePlayer:number )
 end
 
 function Resize()
-  CalculateSizeAndAccomodate(Controls.PanelScrollPanel, Controls.PanelStack);
   local screenX, screenY:number = UIManager:GetScreenSizeVal();
   Controls.OverviewSlide:SetSizeY(screenY);
   Controls.PanelScrollPanel:SetSizeY(screenY-120);
@@ -936,8 +927,8 @@ function OnUpdateUI( type:number, tag:string, iData1:number, iData2:number, strD
 end
 
 function OnShowOverviewPanel( isShowing: boolean )
-  m_isShowingPanel = isShowing;
   if (isShowing) then
+    m_isShowingPanel = true;
     if ContextPtr:IsHidden() or Controls.OverviewSlide:IsReversing() then
       Controls.PauseDismissWindow:SetToBeginning();
       ContextPtr:SetHide(false);
@@ -952,19 +943,42 @@ function OnShowOverviewPanel( isShowing: boolean )
     -- AZURENCY : only check if it's not already reversing
     if not Controls.OverviewSlide:IsReversing() then
       Controls.PauseDismissWindow:Play();
-      Controls.OverviewSlide:Reverse();
+      Close();
     end
   end
+  -- Ensure button state in CityPanel is correct
+  LuaEvents.CityPanel_SetOverViewState(m_isShowingPanel);
+end
+
+function ToggleOverviewTab(tabButton:table)
+  if m_isShowingPanel and m_tabs.selectedControl == tabButton then
+   OnCloseButtonClicked();
+ else
+   if not m_isShowingPanel then
+     OnShowOverviewPanel(true);
+   end
+   if m_tabs.selectedControl ~= tabButton then
+     m_tabs.SelectTab( tabButton );
+   end
+ end
+end
+
+function OnToggleCitizensTab()
+ ToggleOverviewTab( Controls.HealthButton );
+end
+
+function OnToggleBuildingsTab()
+ ToggleOverviewTab( Controls.BuildingsButton );
+end
+
+function OnToggleReligionTab()
+ ToggleOverviewTab( Controls.ReligionButton );
 end
 
 -- ===========================================================================
 function OnHide()
   ContextPtr:SetHide(true);
   Controls.PauseDismissWindow:SetToBeginning();
-end
-
-function OnShowBreakdownTab()
-  m_tabs.SelectTab( Controls.BuildingsButton );
 end
 
 -- ===========================================================================
@@ -976,11 +990,6 @@ end
 -- ===========================================================================
 function Initialize()
   ContextPtr:SetHide(true);
-
-  -- Initialize dynamic tabs, passing the root control as parameter
-  for _,tabData in pairs(g_AdditionalTabData) do
-    tabData:Initialize(Controls.PanelDynamicTab);
-  end
 
   PopulateTabs();
   Controls.PauseDismissWindow:Stop();
@@ -995,6 +1004,9 @@ function Initialize()
   LuaEvents.ActionPanel_OpenChooseCivic.Add(OnClose);
   Events.SystemUpdateUI.Add( OnUpdateUI );
   LuaEvents.CityPanel_ShowOverviewPanel.Add( OnShowOverviewPanel );
+  LuaEvents.CityPanel_ToggleOverviewCitizens.Add( OnToggleCitizensTab );
+  LuaEvents.CityPanel_ToggleOverviewBuildings.Add( OnToggleBuildingsTab );
+  LuaEvents.CityPanel_ToggleOverviewReligion.Add( OnToggleReligionTab );
   LuaEvents.CityPanel_LiveCityDataChanged.Add( OnLiveCityDataChanged )
   LuaEvents.CQUI_RealHousingFromImprovementsCalculated.Add(CQUI_HousingFromImprovementsTableInsert);    --CQUI get real housing from improvements values
 

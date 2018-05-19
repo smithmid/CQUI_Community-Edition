@@ -16,61 +16,46 @@ local m_strEllipsis = Locale.Lookup("LOC_GENERIC_DOT_DOT_DOT");
 -- ===========================================================================
 function TruncateString(control, resultSize, longStr, trailingText)
 
+  local textControl = control;
+
   -- Ensure this has the actual text control
   if control.GetTextControl ~= nil then
-    control = control:GetTextControl();
+    textControl = control:GetTextControl();
+    UI.AssertMsg(textControl.SetTruncateWidth ~= nil, "Calling TruncateString with an unsupported control");
   end
 
-  local isTruncated = false;
-  if(longStr == nil)then
+  
+  -- TODO if trailingText is ever used, add a way to do it to TextControl
+  UI.AssertMsg(trailingText == nil or trailingText == "", "trailingText is not supported");
+  
+  if(longStr == nil) then
     longStr = control:GetText();
-
-    if(trailingText == nil)then
-      longStr = "";
-    end
   end
 
-  if(control ~= nil)then
+  --TODO a better solution than this function would be ideal
+    --calling SetText implicitly truncates if the flag is set
+    --a AutoToolTip flag could be made to avoid setting the tooltip from lua
+    --trailingText could be added, right now its just an ellipsis but it could be arbitrary
+    --this would avoid the weird type shenanigans when truncating TextButtons, TextControls, etc
+  
+  if textControl ~= nil then
+    textControl:SetTruncateWidth(resultSize);
 
-    -- Determine full length of control.
-    control:SetText(longStr);
-    local fullStrExtent = control:GetSizeX();
-
-    -- Determine how long a trailing text portion will be.
-    if(trailingText == nil)then
-      trailingText = "";
-    end
-    control:SetText(trailingText);
-    local trailingExtent = control:GetSizeX();
-
-    local sizeAfterTruncate = resultSize - trailingExtent;
-    if(sizeAfterTruncate > 0)then
-      local truncatedSize = fullStrExtent;
-      local newString = longStr;
-
-      local ellipsis = "";
-
-      if( sizeAfterTruncate < truncatedSize ) then
-        ellipsis = m_strEllipsis;
-        isTruncated = true;
-      end
-
-      control:SetText(ellipsis);
-      local ellipsisExtent = control:GetSizeX();
-      sizeAfterTruncate = sizeAfterTruncate - ellipsisExtent;
-
-      while (sizeAfterTruncate < truncatedSize and Locale.Length(newString) > 1) do
-        newString = Locale.SubString(newString, 1, Locale.Length(newString) - 1);
-        control:SetText(newString);
-        truncatedSize = control:GetSizeX();
-      end
-
-      control:SetText(newString .. ellipsis .. trailingText);
+    if control.SetText ~= nil then
+      control:SetText(longStr);
+    else
+      textControl:SetText(longStr);
     end
   else
-    UI.DataError("Attempt to TruncateString but NIL control passed in!. string=", longStr);
+    UI.AssertMsg(false, "Attempting to truncate a NIL control");
   end
-  return isTruncated;
+  
+  if textControl.IsTextTruncated ~= nil then
+    return textControl:IsTextTruncated();
+  else
+    UI.AssertMsg(false, "Calling IsTextTruncated with an unsupported control");
+    return true;
+  end
 end
 
 
@@ -93,14 +78,14 @@ end
 --	before truncation
 -- ===========================================================================
 function TruncateStringWithTooltipClean(control, resultSize, longStr, trailingText)
-	local cleanString = longStr:match("^%s*(.-)%s*$");
-	local isTruncated = TruncateString( control, resultSize, longStr, trailingText );
-	if isTruncated then
-		control:SetToolTipString( cleanString );
-	else
-		control:SetToolTipString( nil );
-	end
-	return isTruncated;
+  local cleanString = longStr:match("^%s*(.-)%s*$");
+  local isTruncated = TruncateString( control, resultSize, longStr, trailingText );
+  if isTruncated then
+    control:SetToolTipString( cleanString );
+  else
+    control:SetToolTipString( nil );
+  end
+  return isTruncated;
 end
 
 
@@ -126,35 +111,35 @@ function TruncateStringByLength( textString, textLen )
 end
 
 function GetGreatWorksForCity(pCity:table)
-	local result:table = {};
-	if pCity then
-		local pCityBldgs:table = pCity:GetBuildings();
-		for buildingInfo in GameInfo.Buildings() do
-			local buildingIndex:number = buildingInfo.Index;
-			local buildingType:string = buildingInfo.BuildingType;
-			if(pCityBldgs:HasBuilding(buildingIndex)) then
-				local numSlots:number = pCityBldgs:GetNumGreatWorkSlots(buildingIndex);
-				if (numSlots ~= nil and numSlots > 0) then
-					local greatWorksInBuilding:table = {};
+  local result:table = {};
+  if pCity then
+    local pCityBldgs:table = pCity:GetBuildings();
+    for buildingInfo in GameInfo.Buildings() do
+      local buildingIndex:number = buildingInfo.Index;
+      local buildingType:string = buildingInfo.BuildingType;
+      if(pCityBldgs:HasBuilding(buildingIndex)) then
+        local numSlots:number = pCityBldgs:GetNumGreatWorkSlots(buildingIndex);
+        if (numSlots ~= nil and numSlots > 0) then
+          local greatWorksInBuilding:table = {};
 
-					-- populate great works
-					for index:number=0, numSlots - 1 do
-						local greatWorkIndex:number = pCityBldgs:GetGreatWorkInSlot(buildingIndex, index);
-						if greatWorkIndex ~= -1 then
-							local greatWorkType:number = pCityBldgs:GetGreatWorkTypeFromIndex(greatWorkIndex);
-							table.insert(greatWorksInBuilding, GameInfo.GreatWorks[greatWorkType]);
-						end
-					end
+          -- populate great works
+          for index:number=0, numSlots - 1 do
+            local greatWorkIndex:number = pCityBldgs:GetGreatWorkInSlot(buildingIndex, index);
+            if greatWorkIndex ~= -1 then
+              local greatWorkType:number = pCityBldgs:GetGreatWorkTypeFromIndex(greatWorkIndex);
+              table.insert(greatWorksInBuilding, GameInfo.GreatWorks[greatWorkType]);
+            end
+          end
 
-					-- create association between building type and great works
-					if #greatWorksInBuilding > 0 then
-						result[buildingType] = greatWorksInBuilding;
-					end
-				end
-			end
-		end
-	end
-	return result;
+          -- create association between building type and great works
+          if #greatWorksInBuilding > 0 then
+            result[buildingType] = greatWorksInBuilding;
+          end
+        end
+      end
+    end
+  end
+  return result;
 end
 
 -- Wraps a string according to the provided length, but, unlike the built in wrapping, will ignore the limit if a single continuous word exceeds the length of the wrap width

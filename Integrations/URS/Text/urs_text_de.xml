@@ -28,11 +28,16 @@
       <Text>Militär (Marine)</Text>
     </Replace>
     <Replace Tag="LOC_UNITS_VIEW_ON_THE_MAP" Language="de_DE">
-      <Text>Zeige Einheit auf der Karte.</Text>
+      <Text>Zeige Einheit auf der Karte</Text>
     </Replace>
-  <Replace Tag="LOC_HUD_REPORTS_BONUSES_URS" Language="de_DE">
-      <Text>Bonusse</Text>
+    <Replace Tag="LOC_HUD_REPORTS_BONUSES_URS" Language="de_DE">
+      <Text>Boni</Text>
     </Replace>
-
+    <Replace Tag="LOC_HUD_REPORTS_PROMOTION_AVAILABLE" Language="de_DE">
+      <Text>Beförderung verfügbar</Text>
+    </Replace>
+    <Replace Tag="LOC_HUD_REPORTS_IN_FORMATION" Language="de_DE">
+      <Text>In Ausbildung</Text>
+    </Replace>
   </LocalizedText>
 </GameData>

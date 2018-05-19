@@ -14,7 +14,7 @@
       <Text>The current Technology, </Text>
     </Row>
     <Row Tag="LOC_CQUI_HALF_MESSAGE_E" Language="en_US">
-      <Text>, is one turn away from maximum Inspiration potential.</Text>
+      <Text>, is one turn away from maximum Inspiration bonus.</Text>
     </Row>
     <Row Tag="LOC_CQUI_FINISH_MESSAGE_E" Language="en_US">
       <Text>, is completed.</Text>
@@ -64,6 +64,11 @@
     </Row>
     <Row Tag="LOC_POLICY_REMINDER_ACTION_BUTTON_TOOLTIP" Language="en_US">
       <Text>You can change your policy this turn.</Text>
+    </Row>
+
+    <!-- Diplomacy View -->
+    <Row Tag="LOC_CQUI_DIPLOMACY_VIEW_TOTAL_SCORE_PER_TURN_TEXT" Language="en_US">
+      <Text>Total</Text>
     </Row>
 
   </LocalizedText>

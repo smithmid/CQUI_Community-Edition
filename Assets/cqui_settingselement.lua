@@ -167,7 +167,6 @@ function InitializeGossipCheckboxes()
 end
 
 function InitializeTraderScreenCheckboxes()
-  PopulateCheckBox(Controls.TraderColorYieldsCheckbox, "CQUI_TraderColorYields", Locale.Lookup("LOC_CQUI_TRADER_COLOR_YIELDS_TOOLTIP"));
   PopulateCheckBox(Controls.TraderAddDividerCheckbox, "CQUI_TraderAddDivider", Locale.Lookup("LOC_CQUI_TRADER_ADD_DIVIDER_TOOLTIP"));
   PopulateCheckBox(Controls.TraderShowSortOrderCheckbox, "CQUI_TraderShowSortOrder", Locale.Lookup("LOC_CQUI_TRADER_SHOW_SORT_ORDER_TOOLTIP"));
 end
@@ -220,21 +219,6 @@ local ProductionItemHeightConverter = {
   ToValue = function(steps)
     local out = steps + 24;
     if(out > 128) then out = 128; end
-    return out;
-  end
-};
-
---Minimum value is 224, maximum is 768, but only multiples of 8 are allowed. This translates to 68 steps, or 0th step to the 67th
-local MinimapSizeConverter = {
-  ToSteps = function(value)
-    local out = math.floor((value - 224) / 8);
-    if(out < 0) then out = 0;
-    elseif(out > 67) then out = 67; end
-    return out;
-  end,
-  ToValue = function(steps)
-    local out = (steps) * 8 + 224;
-    if(out > 768) then out = 768; end
     return out;
   end
 };
@@ -314,6 +298,7 @@ function Initialize()
   PopulateCheckBox(Controls.ProductionQueueCheckbox, "CQUI_ProductionQueue");
   RegisterControl(Controls.ProductionQueueCheckbox, "CQUI_ProductionQueue", UpdateCheckbox);
   PopulateCheckBox(Controls.ShowLuxuryCheckbox, "CQUI_ShowLuxuries");
+  PopulateCheckBox(Controls.ShowDiploBannerCheckbox, "CQUI_ShowDiploBanner");
   PopulateCheckBox(Controls.ShowCultureGrowthCheckbox, "CQUI_ShowCultureGrowth", Locale.Lookup("LOC_CQUI_CITYVIEW_SHOWCULTUREGROWTH_TOOLTIP"));
   RegisterControl(Controls.ShowCultureGrowthCheckbox, "CQUI_ShowCultureGrowth", UpdateCheckbox);
   PopulateCheckBox(Controls.SmartbannerCheckbox, "CQUI_Smartbanner", Locale.Lookup("LOC_CQUI_CITYVIEW_SMARTBANNER_TOOLTIP"));
@@ -325,14 +310,16 @@ function Initialize()
   PopulateCheckBox(Controls.BlockOnCityAttackCheckbox, "CQUI_BlockOnCityAttack", Locale.Lookup("LOC_CQUI_CITYVIEW_BLOCKONCITYATTACK_TOOLTIP"));
   PopulateCheckBox(Controls.TechVisualCheckbox, "CQUI_TechPopupVisual", Locale.Lookup("LOC_CQUI_POPUPS_TECHVISUAL_TOOLTIP"));
   PopulateCheckBox(Controls.TechAudioCheckbox, "CQUI_TechPopupAudio", Locale.Lookup("LOC_CQUI_POPUPS_TECHAUDIO_TOOLTIP"));
+  PopulateCheckBox(Controls.WonderBuiltVisualCheckbox, "CQUI_WonderBuiltPopupVisual", Locale.Lookup("LOC_CQUI_POPUPS_WONDERBUILTVISUAL_TOOLTIP"));
+  PopulateCheckBox(Controls.WonderBuiltAudioCheckbox, "CQUI_WonderBuiltPopupAudio", Locale.Lookup("LOC_CQUI_POPUPS_WONDERBUILTAUDIO_TOOLTIP"));
   PopulateCheckBox(Controls.TrimGossipCheckbox, "CQUI_TrimGossip", Locale.Lookup("LOC_CQUI_GOSSIP_TRIMMESSAGE_TOOLTIP"));
 
   -- Lenses
   PopulateCheckBox(Controls.AutoapplyArchaeologistLensCheckbox, "CQUI_AutoapplyArchaeologistLens");
   PopulateCheckBox(Controls.AutoapplyBuilderLensCheckbox, "CQUI_AutoapplyBuilderLens");
   PopulateCheckBox(Controls.AutoapplyScoutLensCheckbox, "CQUI_AutoapplyScoutLens");
-  PopulateCheckBox(Controls.ShowNothingToDoInBuilderLens, "CQUI_ShowNothingToDoBuilderLens", Locale.Lookup("LOC_CQUI_LENSES_SHOWNOTHINGTODO_BUILDER_TOOLTIP"));
-  PopulateCheckBox(Controls.ShowGenericInBuilderLens, "CQUI_ShowGenericBuilderLens", Locale.Lookup("LOC_CQUI_LENSES_SHOWGENERIC_BUILDER_TOOLTIP"));
+  --PopulateCheckBox(Controls.ShowNothingToDoInBuilderLens, "CQUI_ShowNothingToDoBuilderLens", Locale.Lookup("LOC_CQUI_LENSES_SHOWNOTHINGTODO_BUILDER_TOOLTIP"));
+  --PopulateCheckBox(Controls.ShowGenericInBuilderLens, "CQUI_ShowGenericBuilderLens", Locale.Lookup("LOC_CQUI_LENSES_SHOWGENERIC_BUILDER_TOOLTIP"));
 
   PopulateCheckBox(Controls.ShowYieldsOnCityHoverCheckbox, "CQUI_ShowYieldsOnCityHover", Locale.Lookup("LOC_CQUI_CITYVIEW_SHOWYIELDSONCITYHOVER_TOOLTIP"));
   PopulateCheckBox(Controls.ShowCitizenIconsOnHoverCheckbox, "CQUI_ShowCitizenIconsOnCityHover", Locale.Lookup("LOC_CQUI_CITYVIEW_SHOWCITIZENICONSONHOVER_TOOLTIP"));
@@ -344,7 +331,6 @@ function Initialize()
   PopulateCheckBox(Controls.SmartWorkIconCheckbox, "CQUI_SmartWorkIcon", Locale.Lookup("LOC_CQUI_CITYVIEW_SMARTWORKICON_TOOLTIP"));
   PopulateCheckBox(Controls.ShowPolicyReminderCheckbox, "CQUI_ShowPolicyReminder", Locale.Lookup("LOC_CQUI_GENERAL_SHOWPRD_TOOLTIP"));
   PopulateSlider(Controls.ProductionItemHeightSlider, Controls.ProductionItemHeightText, "CQUI_ProductionItemHeight", ProductionItemHeightConverter);
-  PopulateSlider(Controls.MinimapSizeSlider, Controls.MinimapSizeText, "CQUI_MinimapSize", MinimapSizeConverter);
   PopulateSlider(Controls.WorkIconSizeSlider, Controls.WorkIconSizeText, "CQUI_WorkIconSize", WorkIconSizeConverter);
   PopulateSlider(Controls.SmartWorkIconSizeSlider, Controls.SmartWorkIconSizeText, "CQUI_SmartWorkIconSize", WorkIconSizeConverter);
   PopulateSlider(Controls.WorkIconAlphaSlider, Controls.WorkIconAlphaText, "CQUI_WorkIconAlpha", WorkIconAlphaConverter);

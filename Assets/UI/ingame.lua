@@ -112,17 +112,18 @@ end
 function OnShow()
   Controls.WorldViewControls:SetHide( false );
 
-  if (Steam ~= nil) then
+  local pFriends = Network.GetFriends();
+  if (pFriends ~= nil) then
     if (GameConfiguration.IsAnyMultiplayer()) then
       if GameConfiguration.IsHotseat() then
-        Steam.SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_HOTSEAT");
+        pFriends:SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_HOTSEAT"); 
       elseif GameConfiguration.IsLANMultiplayer() then
-        Steam.SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_LAN");
+        pFriends:SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_LAN"); 
       else
-        Steam.SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_ONLINE");
+        pFriends:SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_ONLINE"); 
       end
     else
-      Steam.SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_SP");
+      pFriends:SetRichPresence("civPresence", "LOC_PRESENCE_IN_GAME_SP"); 
     end
   end
 end
@@ -204,7 +205,9 @@ function Initialize()
   -- Support for Modded Add-in UI's
   for i, addin in ipairs(Modding.GetUserInterfaces("InGame")) do
     print_debug("Loading InGame UI - " .. addin.ContextPath);
-    table.insert(g_uiAddins, ContextPtr:LoadNewContext(addin.ContextPath));
+    local newContext:table = ContextPtr:LoadNewContext(addin.ContextPath);
+    newContext:ChangeParent(Controls.AdditionalUserInterfaces);
+    table.insert(g_uiAddins, newContext);
   end
 
   ContextPtr:SetInputHandler( OnInputHandler, true );

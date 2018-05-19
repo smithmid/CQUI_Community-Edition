@@ -44,6 +44,8 @@ local CQUI_WorkIconAlpha = .60;
 local CQUI_SmartWorkIcon: boolean = true;
 local CQUI_SmartWorkIconSize: number = 64;
 local CQUI_SmartWorkIconAlpha = .45;
+local CQUI_isMouseDragging = false;
+local CQUI_hasMouseDragged = false;
 
 function CQUI_OnSettingsUpdate()
   CQUI_WorkIconSize = GameConfiguration.GetValue("CQUI_WorkIconSize");
@@ -78,13 +80,20 @@ function OnClickSwapTile( plotId:number )
 
   local tResults :table = CityManager.RequestCommand( pSelectedCity, CityCommandTypes.SWAP_TILE_OWNER, tParameters );
 
-  OnClickCitizen();    -- CQUI update selected city citizens and data
-  CQUI_UpdateAllCitiesCitizens();    -- CQUI update all cities citizens and data when swap tiles
+  -- CQUI update citizens, data and real housing for both cities
+  CQUI_UpdateCitiesCitizensWhenSwapTiles(pSelectedCity);    -- CQUI update citizens and data for a city that is a new tile owner
+  local pCity = Cities.GetPlotPurchaseCity(kPlot);    -- CQUI a city that was a previous tile owner
+  CQUI_UpdateCitiesCitizensWhenSwapTiles(pCity);    -- CQUI update citizens and data for a city that was a previous tile owner
   return true;
 end
 
 -- ===========================================================================
 function OnClickPurchasePlot( plotId:number )
+
+  -- AZURENCY : if we're dragging, don't purchase
+  if CQUI_isMouseDragging and CQUI_hasMouseDragged then
+    return
+  end
 
   local isUsingDistrictPlacementFilter :boolean = (UI.GetInterfaceMode() == InterfaceModeTypes.DISTRICT_PLACEMENT);
   local isUsingBuildingPlacementFilter :boolean = (UI.GetInterfaceMode() == InterfaceModeTypes.BUILDING_PLACEMENT);
@@ -188,52 +197,39 @@ function ShowPurchases()
         (isUsingDistrictPlacementFilter and kPlot:CanHaveDistrict(district.Index, pSelectedCity:GetOwner(), pSelectedCity:GetID())) or
         (isUsingBuildingPlacementFilter and kPlot:CanHaveWonder(building.Index, pSelectedCity:GetOwner(), pSelectedCity:GetID())) then
 
-        -- If district placement mode, one more check to only show purchasable tiles
-        -- that will give a bonus.
-        local isValid :boolean= true;
-        if isUsingDistrictPlacementFilter then
-          isValid = IsShownIfPlotPurchaseable(district.Index, pSelectedCity, kPlot);
-        end
-
-        if isValid then
-          local index:number = kPlot:GetIndex();
-          local pInstance:table = GetInstanceAt( index );
-          if pInstance ~= nil then
-            local goldCost = cityGold:GetPlotPurchaseCost( index );
-            pInstance.PurchaseButton:SetText(tostring(goldCost));
-            AutoSizeGridButton(pInstance.PurchaseButton,51,30,25,"H");
-            pInstance.PurchaseButton:SetDisabled( goldCost > playerGold );
-            if( goldCost > playerGold) then
-              pInstance.PurchaseButton:GetTextControl():SetColorByName("TopBarValueCS");
-            else
-              pInstance.PurchaseButton:GetTextControl():SetColorByName("ResGoldLabelCS");
-            end
-            pInstance.PurchaseButton:RegisterCallback( Mouse.eLClick, function() OnClickPurchasePlot( index ); end );
-            pInstance.PurchaseAnim:SetColor( (goldCost > playerGold ) and 0xbb808080 or 0xffffffff ) ;
-            pInstance.PurchaseAnim:RegisterEndCallback( OnSpinningCoinAnimDone );
-            if (goldCost > playerGold ) then
-              pInstance.PurchaseButton:ClearMouseEnterCallback();
-              pInstance.PurchaseButton:SetToolTipString( Locale.Lookup("LOC_PLOTINFO_YOU_NEED_MORE_GOLD_TO_PURCHASE", goldCost - math.floor(playerGold) ));
-            else
-              pInstance.PurchaseButton:RegisterMouseEnterCallback( function() OnSpinningCoinAnimMouseEnter(pInstance.PurchaseAnim); end );
-              pInstance.PurchaseButton:SetToolTipString("");
-            end
-            if (index == pNextPlotID ) then
-              CQUI_SetupNextPlotButton(pInstance, pCityCulture, TurnsUntilExpansion);
-            end
-            pInstance.PurchaseButton:SetHide( false );
-            table.insert( m_uiPurchase, pInstance );
+        local index:number = kPlot:GetIndex();
+        local pInstance:table = GetInstanceAt( index );
+        if pInstance ~= nil then
+          local goldCost = cityGold:GetPlotPurchaseCost( index );
+          pInstance.PurchaseButton:SetText(tostring(goldCost));
+          AutoSizeGridButton(pInstance.PurchaseButton,51,30,25,"H");
+          pInstance.PurchaseButton:SetDisabled( goldCost > playerGold );
+          if( goldCost > playerGold) then
+            pInstance.PurchaseButton:GetTextControl():SetColorByName("TopBarValueCS");
           else
-            UI.DataError("Failed to get instance for plot purchase button with index #"..tostring(kPlot:GetIndex()));
+            pInstance.PurchaseButton:GetTextControl():SetColorByName("ResGoldLabelCS");
           end
-          table.insert(m_kLensMask[KEY_PLOT_PURCHASE], plotId);
+          pInstance.PurchaseButton:RegisterCallback( Mouse.eLClick, function() OnClickPurchasePlot( index ); end );
+          pInstance.PurchaseAnim:SetColor( (goldCost > playerGold ) and 0xbb808080 or 0xffffffff ) ;
+          pInstance.PurchaseAnim:RegisterEndCallback( OnSpinningCoinAnimDone );
+          if (goldCost > playerGold ) then
+            pInstance.PurchaseButton:ClearMouseEnterCallback();
+            pInstance.PurchaseButton:SetToolTipString( Locale.Lookup("LOC_PLOTINFO_YOU_NEED_MORE_GOLD_TO_PURCHASE", goldCost - math.floor(playerGold) ));
+          else
+            pInstance.PurchaseButton:RegisterMouseEnterCallback( function() OnSpinningCoinAnimMouseEnter(pInstance.PurchaseAnim); end );
+            pInstance.PurchaseButton:SetToolTipString("");
+          end
+          pInstance.PurchaseButton:SetHide( false );
+          table.insert( m_uiPurchase, pInstance );
+        else
+          UI.DataError("Failed to get instance for plot purchase button with index #"..tostring(kPlot:GetIndex()));
         end
+        table.insert(m_kLensMask[KEY_PLOT_PURCHASE], plotId);
       end
     end
   else
     local pInstance:table = GetInstanceAt( pNextPlotID );
     if pInstance ~= nil then
-      CQUI_SetupNextPlotButton(pInstance, pCityCulture, TurnsUntilExpansion);
       table.insert( m_uiPurchase, pInstance );
     end
   end
@@ -259,15 +255,6 @@ function ShowPurchases()
       end
     end
   end
-end
-
--- ===========================================================================
-function CQUI_SetupNextPlotButton(pInstance:table, pCityCulture:table, TurnsUntilExpansion:number)
-  pInstance.CQUI_NextPlotLabel:SetString("[ICON_Turn]" .. Locale.Lookup("LOC_HUD_CITY_IN_TURNS" , TurnsUntilExpansion ) .. "   ");
-  pInstance.CQUI_NextPlotLabel:SetToolTipString( " " .. Round(pCityCulture:GetCurrentCulture(), 1) .. "/" .. pCityCulture:GetNextPlotCultureCost()
-    .. " (+" .. Round(pCityCulture:GetCultureYield(), 1) .. "[ICON_CULTURE]) " .. Locale.Lookup( "LOC_HUD_CITY_BORDER_EXPANSION" , TurnsUntilExpansion ).."[ICON_Turn]");
-  pInstance.CQUI_NextPlotButton:RegisterCallback( Mouse.eLClick, function() LuaEvents.CQUI_ToggleGrowthTile() end);
-  pInstance.CQUI_NextPlotButton:SetHide( false );
 end
 
 -- ===========================================================================
@@ -525,9 +512,16 @@ function OnDistrictAddedToMap( playerID: number, districtID : number, cityID :nu
     OnPlotYieldChanged(districtX, districtY);
     OnMapYieldsChanged();
     -- UI.DeselectAllCities();
+
+    -- CQUI update citizens, data and real housing for close cities within 4 tiles when city founded
+    -- we use it only to update real housing for a city that loses a 3rd radius tile to a city that is founded within 4 tiles
+  elseif playerID == Game.GetLocalPlayer() then
+    local kCity = CityManager.GetCity(playerID, cityID);
+    CQUI_UpdateCloseCitiesCitizensWhenCityFounded(kCity);
   end
 end
 
+-- ===========================================================================
 function OnBuildingAddedToMap( plotX:number, plotY:number, buildingType:number, misc1, misc2, misc3 )
 end
 
@@ -952,37 +946,53 @@ function KeyHandler( key:number )
   end
   return false;
 end
+
 function OnInputHandler( pInputStruct:table )
   local uiMsg = pInputStruct:GetMessageType();
   if (uiMsg == KeyEvents.KeyUp) then return KeyHandler( pInputStruct:GetKey() ); end;
+
+  -- AZURENCY : added drag awareness to handle the clic/drag on purchase button (from minimap.lua)
+  -- Enable drag on LMB down
+  if uiMsg == MouseEvents.LButtonDown then
+    CQUI_isMouseDragging = true; -- Potential drag is in process
+    CQUI_hasMouseDragged = false; -- There has been no actual dragging yet
+    return false;
+  -- Disable drag on LMB up (but only if mouse was previously dragging)
+  elseif uiMsg == MouseEvents.LButtonUp and CQUI_isMouseDragging then
+    CQUI_isMouseDragging = false;
+    return false;
+  -- If the mouse move and is dragging, it has dragged
+  elseif uiMsg == MouseEvents.MouseMove and CQUI_isMouseDragging then
+    CQUI_hasMouseDragged = true;
+    return false;
+  end
+
   return false;
 end
 
 -- ===========================================================================
--- CQUI update all cities citizens and data when swap tiles
-function CQUI_UpdateAllCitiesCitizens()
+-- CQUI update citizens, data and real housing for both cities when swap tiles
+function CQUI_UpdateCitiesCitizensWhenSwapTiles(pCity)
+
+  CityManager.RequestCommand(pCity, CityCommandTypes.SET_FOCUS, nil);
+
+  local pCityID = pCity:GetID();
+  LuaEvents.CQUI_CityInfoUpdated(pCityID);
+end
+
+-- ===========================================================================
+-- CQUI update citizens, data and real housing for close cities within 4 tiles when city founded
+-- we use it only to update real housing for a city that loses a 3rd radius tile to a city that is founded within 4 tiles
+function CQUI_UpdateCloseCitiesCitizensWhenCityFounded(kCity)
 
   local m_pCity:table = Players[Game.GetLocalPlayer()]:GetCities();
   for i, pCity in m_pCity:Members() do
-    local pCitizens   :table = pCity:GetCitizens();
-    local tParameters :table = {};
+    if Map.GetPlotDistance(kCity:GetX(), kCity:GetY(), pCity:GetX(), pCity:GetY()) == 4 then
+      CityManager.RequestCommand(pCity, CityCommandTypes.SET_FOCUS, nil);
 
-    if pCitizens:IsFavoredYield(YieldTypes.CULTURE) then
-      tParameters[CityCommandTypes.PARAM_FLAGS] = 0;        -- Set favoured
-      tParameters[CityCommandTypes.PARAM_DATA0] = 1;        -- on
-    elseif pCitizens:IsDisfavoredYield(YieldTypes.CULTURE) then
-      tParameters[CityCommandTypes.PARAM_FLAGS] = 1;        -- Set Ignored
-      tParameters[CityCommandTypes.PARAM_DATA0] = 1;        -- on
-    else
-      tParameters[CityCommandTypes.PARAM_FLAGS] = 0;        -- Set favoured
-      tParameters[CityCommandTypes.PARAM_DATA0] = 0;        -- off
+      local pCityID = pCity:GetID();
+      LuaEvents.CQUI_CityInfoUpdated(pCityID);
     end
-
-    tParameters[CityCommandTypes.PARAM_YIELD_TYPE] = YieldTypes.CULTURE;  -- Yield type
-    CityManager.RequestCommand(pCity, CityCommandTypes.SET_FOCUS, tParameters);
-
-    local pCityID = pCity:GetID();
-    LuaEvents.CQUI_CityInfoUpdated(pCityID);
   end
 end
 

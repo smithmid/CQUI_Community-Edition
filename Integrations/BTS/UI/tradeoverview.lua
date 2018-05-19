@@ -4,7 +4,6 @@
 
 local showSortOrdersPermanently = false
 local addDividerBetweenGroups = true
-local colorYieldValues = true
 local hideTradingPostIcon = false
 
 -- Color Settings for Headers
@@ -153,7 +152,6 @@ local m_dividerCount = 0
 function CQUI_OnSettingsUpdate()
   showSortOrdersPermanently = GameConfiguration.GetValue("CQUI_TraderShowSortOrder");
   addDividerBetweenGroups = GameConfiguration.GetValue("CQUI_TraderAddDivider");
-  colorYieldValues = GameConfiguration.GetValue("CQUI_TraderColorYields");
 
   Refresh()
 end
@@ -405,23 +403,21 @@ function ViewRoutesToCities()
   local routesSortedByPlayer:table = {};
   local players = Game.GetPlayers{ Alive=true };
   for _, player in ipairs(players) do
-    if m_filterList[m_filterSelected].FilterFunction and m_filterList[m_filterSelected].FilterFunction(player) then
-      for _, city in player:GetCities():Members() do
-        local outgoingRoutes = city:GetTrade():GetOutgoingRoutes();
-        for _, route in ipairs(outgoingRoutes) do
-          -- Check that the destination city owner is the local palyer
-          local isDestinationOwnedByLocalPlayer:boolean = false;
-          if route.DestinationCityPlayer == Game.GetLocalPlayer() then
-            isDestinationOwnedByLocalPlayer = true;
-          end
+    -- Don't show domestic routes
+    if player:GetID() ~= Game.GetLocalPlayer() then
+      if m_filterList[m_filterSelected].FilterFunction and m_filterList[m_filterSelected].FilterFunction(player) then
+        for _, city in player:GetCities():Members() do
+          local outgoingRoutes = city:GetTrade():GetOutgoingRoutes();
+          for _, route in ipairs(outgoingRoutes) do
+            -- Make sure the destination city is owned by the local player
+            if route.DestinationCityPlayer == Game.GetLocalPlayer() then
+              -- Make sure we have a table for each destination player
+              if routesSortedByPlayer[route.OriginCityPlayer] == nil then
+                routesSortedByPlayer[route.OriginCityPlayer] = {};
+              end
 
-          if isDestinationOwnedByLocalPlayer then
-            -- Make sure we have a table for each destination player
-            if routesSortedByPlayer[route.OriginCityPlayer] == nil then
-              routesSortedByPlayer[route.OriginCityPlayer] = {};
+              tinsert(routesSortedByPlayer[route.OriginCityPlayer], route);
             end
-
-            tinsert(routesSortedByPlayer[route.OriginCityPlayer], route);
           end
         end
       end
@@ -646,6 +642,7 @@ end
 function AddChooseRouteButtonInstance( tradeUnit:table )
   local simpleButtonInstance:table = m_SimpleButtonInstanceIM:GetInstance();
   simpleButtonInstance.GridButton:SetText(L_Lookup("LOC_TRADE_OVERVIEW_CHOOSE_ROUTE"));
+  simpleButtonInstance.GridButton:SetDisabled(false);
   simpleButtonInstance.GridButton:RegisterCallback( M_LCick,
     function()
       SelectUnit( tradeUnit );
@@ -924,22 +921,6 @@ function SetOriginRouteInstanceYields(routeInstance, routeInfo)
   routeInstance.OriginYieldScienceLabel:SetText(yieldTexts[SCIENCE_INDEX])
   routeInstance.OriginYieldCultureLabel:SetText(yieldTexts[CULTURE_INDEX])
   routeInstance.OriginYieldFaithLabel:SetText(yieldTexts[FAITH_INDEX])
-
-  if colorYieldValues then
-    routeInstance.OriginYieldFoodLabel:SetColorByName("Food");
-    routeInstance.OriginYieldProductionLabel:SetColorByName("Production");
-    routeInstance.OriginYieldGoldLabel:SetColorByName("Gold");
-    routeInstance.OriginYieldScienceLabel:SetColorByName("Science");
-    routeInstance.OriginYieldCultureLabel:SetColorByName("Culture");
-    routeInstance.OriginYieldFaithLabel:SetColorByName("Faith");
-  else
-    routeInstance.OriginYieldFoodLabel:SetColorByName("White");
-    routeInstance.OriginYieldProductionLabel:SetColorByName("White");
-    routeInstance.OriginYieldGoldLabel:SetColorByName("White");
-    routeInstance.OriginYieldScienceLabel:SetColorByName("White");
-    routeInstance.OriginYieldCultureLabel:SetColorByName("White");
-    routeInstance.OriginYieldFaithLabel:SetColorByName("White");
-  end
 end
 
 function SetDestinationRouteInstanceYields(routeInstance, routeInfo)
@@ -955,22 +936,6 @@ function SetDestinationRouteInstanceYields(routeInstance, routeInfo)
   routeInstance.DestinationYieldScienceLabel:SetText(yieldTexts[SCIENCE_INDEX])
   routeInstance.DestinationYieldCultureLabel:SetText(yieldTexts[CULTURE_INDEX])
   routeInstance.DestinationYieldFaithLabel:SetText(yieldTexts[FAITH_INDEX])
-
-  if colorYieldValues then
-    routeInstance.OriginYieldFoodLabel:SetColorByName("Food");
-    routeInstance.OriginYieldProductionLabel:SetColorByName("Production");
-    routeInstance.OriginYieldGoldLabel:SetColorByName("Gold");
-    routeInstance.OriginYieldScienceLabel:SetColorByName("Science");
-    routeInstance.OriginYieldCultureLabel:SetColorByName("Culture");
-    routeInstance.OriginYieldFaithLabel:SetColorByName("Faith");
-  else
-    routeInstance.OriginYieldFoodLabel:SetColorByName("White");
-    routeInstance.OriginYieldProductionLabel:SetColorByName("White");
-    routeInstance.OriginYieldGoldLabel:SetColorByName("White");
-    routeInstance.OriginYieldScienceLabel:SetColorByName("White");
-    routeInstance.OriginYieldCultureLabel:SetColorByName("White");
-    routeInstance.OriginYieldFaithLabel:SetColorByName("White");
-  end
 end
 
 -- ===========================================================================
@@ -1688,7 +1653,7 @@ function RefreshSortButtons( sortSettings:table )
 end
 
 function RefreshSortOrderLabels( sortSettings:table )
-  for index, sortEntry in ipairs(sortSettings) do
+  for _, sortEntry in ipairs(sortSettings) do
     if sortEntry.SortByID == SORT_BY_ID.FOOD then
       Controls.FoodSortOrder:SetHide(false);
       Controls.FoodSortOrder:SetText(index);

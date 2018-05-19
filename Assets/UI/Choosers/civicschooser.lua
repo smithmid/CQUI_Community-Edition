@@ -4,17 +4,19 @@
 --	Slideout panel containing available civic options.
 --
 -- ===========================================================================
+-- Include self contained additional tabs
+g_ExtraIconData = {};
+include("CivicsTreeIconLoader_", true);
+
 include("ToolTipHelper")
 include("TechAndCivicSupport"); -- Already includes Civ6Common and InstanceManager
 include("AnimSidePanelSupport");
 include("SupportFunctions");
 include("Civ6Common");
 
-
 -- ===========================================================================
 --	CONSTANTS
 -- ===========================================================================
-local DATA_FIELD_UNLOCK_IM		:string = "_UnlockIM";
 local RELOAD_CACHE_ID			:string = "CivicChooser";	-- Must be unique (usually the same as the file name)
 local MAX_BEFORE_TRUNC_BOOST_MSG:number = 210;					-- Size in which boost messages will be truncated and tooltipified
 local SIZE_ICON_LARGE			:number = 38;
@@ -30,6 +32,7 @@ local m_currentID		:number = -1;
 local m_isExpanded		:boolean= false;
 local m_lastCompletedID	:number = -1;
 local m_needsRefresh	:boolean = false; --used to track whether a given series of events (terminated by GameCoreEventPublishComplete)
+local m_CachedModifiers	:table = {};
 
 --CQUI Members
 local CQUI_AlwaysOpenTechTrees = false; --Ignores events calling for this to open when true
@@ -104,7 +107,12 @@ function View( playerID:number, kData:table )
 
   m_civicsIM:ResetInstances();
 
+  for _,iconData in pairs(g_ExtraIconData) do
+    iconData:Reset();
+  end
+  
   local kActive : table = GetActiveData(kData);
+  
   if kActive == nil then
     RealizeCurrentCivic( nil );	-- No research done yet
   end
@@ -112,7 +120,7 @@ function View( playerID:number, kData:table )
   table.sort(kData, function(a, b) return Locale.Compare(a.Name, b.Name) == -1; end);
   for i, data in ipairs(kData) do
     if data.IsCurrent or data.IsLastCompleted then
-      RealizeCurrentCivic( playerID, data );
+      RealizeCurrentCivic( playerID, data, nil, m_CachedModifiers );
       if (data.Repeatable) then
         AddAvailableCivic( playerID, data );
       end
@@ -120,6 +128,7 @@ function View( playerID:number, kData:table )
       AddAvailableCivic( playerID, data );
     end
   end
+  
   RealizeSize();
 end
 
@@ -160,11 +169,32 @@ function AddAvailableCivic( playerID:number, kData:table )
   if not isDisabled then
     callback = function() ResetOverflowArrow( kItemInstance ); OnChooseCivic(kData.Hash); end;
   end
-
+  
+  -- Include extra icons in total unlocks
+  local extraUnlocks:table = {};
+  local hideDescriptionIcon:boolean = false;
+  local cachedModifiers:table = m_CachedModifiers[kData.CivicType];
+  if ( cachedModifiers ) then
+    for _,tModifier in ipairs(cachedModifiers) do
+      local tIconData :table = g_ExtraIconData[tModifier.ModifierType];
+      if ( tIconData ) then
+        hideDescriptionIcon = hideDescriptionIcon or tIconData.HideDescriptionIcon;
+        table.insert(extraUnlocks, {IconData=tIconData, ModifierTable=tModifier});
+      end  
+  end
+  end
+  
   -- Handle overflow for unlock icons
-  numUnlockables = PopulateUnlockablesForCivic( playerID, kData.ID, unlockIM, nil, callback );
+  numUnlockables = PopulateUnlockablesForCivic( playerID, kData.ID, unlockIM, nil, callback, hideDescriptionIcon );
+  
+  -- Initialize extra icons
+  for _,tUnlock in pairs(extraUnlocks) do
+    tUnlock.IconData:Initialize(kItemInstance.UnlockStack, tUnlock.ModifierTable);
+    numUnlockables = numUnlockables + 1;
+  end
+  
   if numUnlockables ~= nil then
-    HandleOverflow(numUnlockables, kItemInstance);
+    HandleOverflow(numUnlockables, kItemInstance, 5, 5);
   end
 
   if kData.ResearchQueuePosition ~= -1 then
@@ -344,7 +374,7 @@ end
 -- input processing) so we can defer the rebuild until here.
 -- ===========================================================================
 function FlushChanges()
-  if m_needsRefresh then
+  if m_needsRefresh and ContextPtr:IsVisible() then
     Refresh();
   end
 end
@@ -375,6 +405,13 @@ function OnInit( isReload:boolean )
     end
   end
 end
+
+-- ===========================================================================
+function OnShow()
+  Refresh();
+end
+
+
 -- ===========================================================================
 function OnShutdown()
   LuaEvents.GameDebug_AddValue(RELOAD_CACHE_ID, "m_currentID", m_currentID);
@@ -400,13 +437,18 @@ function CQUI_OnSettingsUpdate()
   CQUI_ShowTechCivicRecommendations = GameConfiguration.GetValue("CQUI_ShowTechCivicRecommendations") == 1
 end
 
+
 -- ===========================================================================
 --	INIT
 -- ===========================================================================
 function Initialize()
 
+  -- Cache frequently used / expensive data
+  m_CachedModifiers = TechAndCivicSupport_BuildCivicModifierCache(); 
+ 
   -- Hot-reload events
   ContextPtr:SetInitHandler(OnInit);
+  ContextPtr:SetShowHandler(OnShow); 
   ContextPtr:SetShutdown(OnShutdown);
   LuaEvents.GameDebug_Return.Add(OnGameDebugReturn);
 
@@ -416,6 +458,7 @@ function Initialize()
   -- Screen events
   LuaEvents.ActionPanel_OpenChooseCivic.Add(OnOpenPanel);
   LuaEvents.WorldTracker_OpenChooseCivic.Add(OnOpenPanel);
+  LuaEvents.LaunchBar_CloseChoosers.Add(OnClosePanel); 
 
   -- Game events
   Events.CityInitialized.Add(			OnCityInitialized );

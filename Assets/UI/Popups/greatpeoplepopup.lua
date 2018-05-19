@@ -29,7 +29,6 @@ local m_greatPersonPanelIM  :table  = InstanceManager:new("PanelInstance",      
 local m_greatPersonRowIM  :table  = InstanceManager:new("PastRecruitmentInstance",  "Content",  Controls.RecruitedStack);
 local m_uiGreatPeople   :table;
 local m_kData       :table;
-local m_ToggleGreatPeopleId;
 local m_activeBiographyID :number = -1; -- Only allow one open at a time (or very quick exceed font allocation)
 local m_tabs        :table;
 local m_defaultPastRowHeight    :number = -1; -- Default/mix height (from XML) for a previously recruited row
@@ -145,33 +144,33 @@ function ViewCurrent( data:table )
     end
 
     -- Grab icon representing type of class
-    if (kPerson.ClassID ~= nil) then
-      local icon:string = "ICON_" .. classData.GreatPersonClassType;
-      local textureOffsetX:number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(icon, 90);
-      if textureSheet == nil then   -- Use default if none found
-        print("WARNING: Could not find icon atlas entry for the class of Great Person '"..icon.."', using default instead.");
-        textureOffsetX = 0;
-        textureOffsetY = 0;
-        textureSheet = "GreatPeopleClass90";
-      end
-      instance.ClassImage:SetTexture( textureOffsetX, textureOffsetY, textureSheet );
-    end
+    -- if (kPerson.ClassID ~= nil) then
+      -- local icon:string = "ICON_" .. classData.GreatPersonClassType;
+      -- local textureOffsetX:number, textureOffsetY:number, textureSheet:string = IconManager:FindIconAtlas(icon, 90);
+      -- if textureSheet == nil then   -- Use default if none found
+        -- print("WARNING: Could not find icon atlas entry for the class of Great Person '"..icon.."', using default instead.");
+        -- textureOffsetX = 0;
+        -- textureOffsetY = 0;
+        -- textureSheet = "GreatPeopleClass90";
+      -- end
+      -- instance.ClassImage:SetTexture( textureOffsetX, textureOffsetY, textureSheet );
+    -- end
 
     -- Grab icon of the great person themselves; first try a specific image, if it doesn't exist
     -- then grab a generic representation based on the class.
-    --if (kPerson.ClassID ~= nil) and (kPerson.IndividualID ~= nil) then
-      --local portrait:string = "ICON_" .. individualData.GreatPersonIndividualType;
-      --textureOffsetX, textureOffsetY, textureSheet = IconManager:FindIconAtlas(portrait, 160, true);
-      --if textureSheet == nil then   -- Use a default if none found
-        --print("WARNING: Could not find icon atlas entry for the individual Great Person '"..portrait.."', using default instead.");
-        --portrait = "ICON_GENERIC_" .. classData.GreatPersonClassType .. "_" .. individualData.Gender;
-        --portrait = portrait:gsub("_CLASS","_INDIVIDUAL");
-      --end
-      --local isValid = instance.Portrait:SetIcon(portrait);
+    if (kPerson.ClassID ~= nil) and (kPerson.IndividualID ~= nil) then
+      local portrait:string = "ICON_" .. individualData.GreatPersonIndividualType;
+      textureOffsetX, textureOffsetY, textureSheet = IconManager:FindIconAtlas(portrait, 216, true);
+      if textureSheet == nil then   -- Use a default if none found
+        -- print("WARNING: Could not find icon atlas entry for the individual Great Person '"..portrait.."', using default instead.");
+        portrait = "ICON_GENERIC_" .. classData.GreatPersonClassType .. "_" .. individualData.Gender;
+        portrait = portrait:gsub("_CLASS","_INDIVIDUAL");
+      end
+      local isValid = instance.Portrait:SetIcon(portrait);
       --if (isValid) then
         --instance.BiographyPortrait:SetIcon(portrait);
       --end
-    --end
+    end
 
     if instance["m_EffectsIM"] ~= nil then
       instance["m_EffectsIM"]:ResetInstances();
@@ -226,10 +225,8 @@ function ViewCurrent( data:table )
 
       -- Buy via gold
       if (HasCapability("CAPABILITY_GREAT_PEOPLE_RECRUIT_WITH_GOLD") and (not kPerson.CanRecruit and not kPerson.CanReject and kPerson.PatronizeWithGoldCost ~= nil and kPerson.PatronizeWithGoldCost < 1000000)) then
-        local patronizeButtonText :string = kPerson.PatronizeWithGoldCost.."[ICON_Gold]";
-        local patronizeDetailsText:string = Locale.Lookup("LOC_GREAT_PEOPLE_PATRONAGE_GOLD_DETAILS", kPerson.PatronizeWithGoldCost);
-        instance.GoldButton:SetText(patronizeButtonText);
-        instance.GoldButton:SetToolTipString(patronizeDetailsText);
+        instance.GoldButton:SetText(kPerson.PatronizeWithGoldCost .. "[ICON_Gold]");
+        instance.GoldButton:SetToolTipString(GetPatronizeWithGoldTT(kPerson));
         instance.GoldButton:SetVoid1(kPerson.IndividualID);
         instance.GoldButton:RegisterCallback(Mouse.eLClick, OnGoldButtonClick);
         instance.GoldButton:SetDisabled(not kPerson.CanPatronizeWithGold);
@@ -240,10 +237,8 @@ function ViewCurrent( data:table )
 
       -- Buy via Faith
       if (HasCapability("CAPABILITY_GREAT_PEOPLE_RECRUIT_WITH_FAITH") and (not kPerson.CanRecruit and not kPerson.CanReject and kPerson.PatronizeWithFaithCost ~= nil and kPerson.PatronizeWithFaithCost < 1000000)) then
-        local patronizeButtonText :string = kPerson.PatronizeWithFaithCost.."[ICON_Faith]";
-        local patronizeDetailsText  :string = Locale.Lookup("LOC_GREAT_PEOPLE_PATRONAGE_FAITH_DETAILS", kPerson.PatronizeWithFaithCost);
-        instance.FaithButton:SetText(patronizeButtonText);
-        instance.FaithButton:SetToolTipString(patronizeDetailsText);
+        instance.FaithButton:SetText(kPerson.PatronizeWithFaithCost .. "[ICON_Faith]");
+        instance.FaithButton:SetToolTipString(GetPatronizeWithFaithTT(kPerson));
         instance.FaithButton:SetVoid1(kPerson.IndividualID);
         instance.FaithButton:RegisterCallback(Mouse.eLClick, OnFaithButtonClick);
         instance.FaithButton:SetDisabled(not kPerson.CanPatronizeWithFaith);
@@ -410,6 +405,13 @@ function ViewCurrent( data:table )
   end
 end
 
+function GetPatronizeWithGoldTT(kPerson)
+  return Locale.Lookup("LOC_GREAT_PEOPLE_PATRONAGE_GOLD_DETAILS", kPerson.PatronizeWithGoldCost);
+end
+
+function GetPatronizeWithFaithTT(kPerson)
+  return Locale.Lookup("LOC_GREAT_PEOPLE_PATRONAGE_FAITH_DETAILS", kPerson.PatronizeWithFaithCost);
+end
 
 -- =======================================================================================
 --  Layout the data for previously recruited great people.
@@ -764,9 +766,17 @@ function Open()
     return
   end
 
-  ContextPtr:SetHide(false);
+  -- Queue the screen as a popup, but we want it to render at a desired location in the hierarchy, not on top of everything.
+  if not UIManager:IsInPopupQueue(ContextPtr) then
+    local kParameters = {};
+    kParameters.RenderAtCurrentParent = true;
+    kParameters.InputAtCurrentParent = true;
+    kParameters.AlwaysVisibleInQueue = true;
+    UIManager:QueuePopup(ContextPtr, PopupPriority.Low, kParameters);
+    UI.PlaySound("UI_Screen_Open");
+  end
+  
   Refresh();
-  UI.PlaySound("UI_Screen_Open");
 
   -- From Civ6_styles: FullScreenVignetteConsumer
   Controls.ScreenAnimIn:SetToBeginning();
@@ -781,8 +791,9 @@ function Close()
     UI.PlaySound("UI_Screen_Close");
   end
 
-  ContextPtr:SetHide(true);
-  LuaEvents.GreatPeople_CloseGreatPeople();
+  if UIManager:DequeuePopup(ContextPtr) then
+    LuaEvents.GreatPeople_CloseGreatPeople();
+  end
 end
 
 -- =======================================================================================
@@ -1004,22 +1015,6 @@ function OnGameDebugReturn( context:string, contextTable:table )
   end
 end
 
--- ===========================================================================
---  Input Hotkey Event
--- ===========================================================================
-function OnInputActionTriggered( actionId )
-  if actionId == m_ToggleGreatPeopleId then
-    if UI.QueryGlobalParameterInt("DISABLE_GREAT_PEOPLE_HOTKEY") ~= 1 then
-      UI.PlaySound("Play_UI_Click");
-      if(ContextPtr:IsHidden()) then
-        LuaEvents.LaunchBar_OpenGreatPeoplePopup();
-      else
-        OnClose();
-      end
-    end
-  end
-end
-
 -- =======================================================================================
 --
 -- =======================================================================================
@@ -1067,10 +1062,5 @@ function Initialize()
   Controls.ButtonGreatPeople:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end);
   Controls.ButtonPreviouslyRecruited:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end);
 
-  -- Hot Key Handling
-  m_ToggleGreatPeopleId = Input.GetActionId("ToggleGreatPeople");
-  if m_ToggleGreatPeopleId ~= nil then
-    Events.InputActionTriggered.Add( OnInputActionTriggered );
-  end
 end
 Initialize();
